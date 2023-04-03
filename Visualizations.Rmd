@@ -1,0 +1,100 @@
+---
+title: "Untitled"
+author: "Samuel Brown"
+date: "2023-03-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+### Read in data
+files <- list.files(pattern = "*.csv")
+games <- lapply(files, read.csv, header = TRUE) 
+
+allGames <- bind_rows(games)
+```
+
+```{r}
+### Clean data
+
+```
+
+```{r}
+### Make pitch type table
+allGames %>%
+  filter(PitchCall != "",
+         TaggedPitchType != "",
+         Pitcher == "Brian Edgington") %>%
+  group_by(Pitcher, TaggedPitchType) %>%
+  summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
+                         "-",
+                        round(quantile(RelSpeed, .75), 1)),
+            Number = n(),
+            Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "Foul", "FoulTip", "InPlay")),
+            Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch")),
+            Swings = sum(PitchCall %in% c("Foul", "FoulTip", "InPlay", "StrikeSwinging")),
+            Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch")),
+            SwStr = sum(PitchCall == "StrikeSwinging"),
+            WhiffPerc = 100*round(SwStr/Swings, 3),
+            HR = sum(PlayResult == "HomeRun"),
+            BABIP = sum(PlayResult %in% c("Single", "Double", "Triple"))/
+              sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                    (HitType == "Bunt" & PlayResult == "Sacrifice")),
+            .groups = "keep")
+```
+
+```{r}
+# Pie charts for pitch types
+allGames %>%
+  filter(PitchCall != "",
+         TaggedPitchType != "",
+         Pitcher == "Brian Edgington",
+         TaggedPitchType == "Fastball") %>%
+  group_by(Pitcher, TaggedPitchType) %>%
+  summarize(Foul = sum(PitchCall == "Foul"),
+            BIP = sum(PitchCall == "InPlay"),
+            SwStr = sum(PitchCall == "StrikeSwinging"),
+            .groups = "keep") %>%
+  ungroup() %>%
+  select(Foul, BIP, SwStr) %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(V1 = na_if(V1, 0),
+         vars = rownames(.),
+         prop = 100*V1/sum(V1),
+         ypos = cumsum(prop)-0.5*prop) %>%
+  na.omit() %>%
+  ggplot(aes(x = "", y = prop, fill = vars)) +
+    geom_bar(stat = "identity", width = 1, color = "white") +
+    coord_polar("y", start = 0) +
+    labs(title = "Swings") +
+    theme_void() +
+    theme(legend.title = element_blank(),
+          plot.title = element_text(size = 13)) +
+    geom_text(aes(y = ypos, label = V1), color = "white", size = 4.75) +
+    scale_fill_manual(values = c(Foul = "#181C90", BIP = "#AEB7B3", SwStr = "#F78707"),
+                      labels = c("In Play", "Foul", "Swinging Strike")) 
+
+
+```
+
+```{r}
+# Make pitch location by pitch type plot
+allGames %>%
+  filter(PitchCall != "",
+         TaggedPitchType != "",
+         Pitcher == "Brian Edgington") %>%
+  ggplot(aes(x = PlateLocSide, y = PlateLocHeight, color = RelSpeed)) +
+  geom_point() +
+  xlim(-2.5, 2.5) +
+  facet_grid(. ~ TaggedPitchType) +
+  theme_bw()
+```
+
+
+
+
