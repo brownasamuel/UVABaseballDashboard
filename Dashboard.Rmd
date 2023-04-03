@@ -1,0 +1,26 @@
+---
+title: "Untitled"
+author: "Samuel Brown"
+date: "2023-03-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+### Read in data
+files <- list.files(pattern = "*.csv")
+games <- lapply(files, read.csv, header = TRUE) 
+
+allGames <- bind_rows(games)
+```
+
+```{r}
+### Clean data
+
+```
+
+
