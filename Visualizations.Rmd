@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Visualizations for the dashboard"
 author: "Samuel Brown"
 date: "2023-03-27"
 output: pdf_document
@@ -63,8 +63,9 @@ allGames %>%
   select(Foul, BIP, SwStr) %>%
   t() %>%
   as.data.frame() %>%
+  mutate(vars = rownames(.))%>%
+  arrange(desc(vars)) %>%
   mutate(V1 = na_if(V1, 0),
-         vars = rownames(.),
          prop = 100*V1/sum(V1),
          ypos = cumsum(prop)-0.5*prop) %>%
   na.omit() %>%
@@ -78,7 +79,6 @@ allGames %>%
     geom_text(aes(y = ypos, label = V1), color = "white", size = 4.75) +
     scale_fill_manual(values = c(Foul = "#181C90", BIP = "#AEB7B3", SwStr = "#F78707"),
                       labels = c("In Play", "Foul", "Swinging Strike")) 
-
 
 ```
 
