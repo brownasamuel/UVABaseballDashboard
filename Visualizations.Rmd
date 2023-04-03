@@ -123,11 +123,16 @@ allGames %>%
   filter(PitchCall != "",
          TaggedPitchType != "",
          Pitcher == "Brian Edgington") %>%
-  ggplot(aes(x = PlateLocSide, y = PlateLocHeight, color = RelSpeed)) +
-  geom_point(na.rm = TRUE) +
+  ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+  geom_point(aes(color = RelSpeed), na.rm = TRUE) +
   xlim(-2.5, 2.5) +
+  theme_bw() +
+  labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft)", color = "Velocity") +
+  geom_path(data = data.frame(x = c(-.95, -.95, .95, .95, -.95),
+                              y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+            aes(x = x, y = y)) +
   facet_grid(. ~ TaggedPitchType) +
-  theme_bw()
+  coord_equal()
 ```
 
 
