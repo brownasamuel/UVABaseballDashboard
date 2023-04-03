@@ -20,11 +20,7 @@ games <- lapply(files, read.csv, header = TRUE)
 allGames <- bind_rows(games)
 ```
 
-```{r}
-### Clean data
-
-```
-
+# Pitch types
 ```{r}
 ### Make pitch type table
 allGames %>%
@@ -35,7 +31,7 @@ allGames %>%
   summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
                          "-",
                         round(quantile(RelSpeed, .75), 1)),
-            Number = n(),
+            'Total Pitches' = n(),
             Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "Foul", "FoulTip", "InPlay")),
             Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch")),
             Swings = sum(PitchCall %in% c("Foul", "FoulTip", "InPlay", "StrikeSwinging")),
@@ -131,10 +127,118 @@ allGames %>%
   geom_path(data = data.frame(x = c(-.95, -.95, .95, .95, -.95),
                               y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
             aes(x = x, y = y)) +
+  scale_color_gradient(low = "#181C90", high = "#F78707") +
   facet_grid(. ~ TaggedPitchType) +
   coord_equal()
 ```
 
+# Counts
+```{r}
+### Make pitch type table
+allGames %>%
+  filter(PitchCall != "",
+         TaggedPitchType != "",
+         Pitcher == "Brian Edgington") %>%
+  mutate(Count = paste(Balls, "-", Strikes, sep = "")) %>%
+  group_by(Pitcher, Count) %>%
+  summarize('Total Pitches' = n(),
+            Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "Foul", "FoulTip", "InPlay")),
+            Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch")),
+            Swings = sum(PitchCall %in% c("Foul", "FoulTip", "InPlay", "StrikeSwinging")),
+            Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch")),
+            SwStr = sum(PitchCall == "StrikeSwinging"),
+            WhiffPerc = 100*round(SwStr/Swings, 3),
+            HR = sum(PlayResult == "HomeRun"),
+            BABIP = sum(PlayResult %in% c("Single", "Double", "Triple"))/
+              sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                    (HitType == "Bunt" & PlayResult == "Sacrifice")),
+            .groups = "keep") %>%
+  kable()
+```
 
+```{r}
+# Pie chart for a count
+ggarrange(allGames %>%
+            mutate(Count = paste(Balls, "-", Strikes, sep = "")) %>%
+            filter(PitchCall != "",
+            Pitcher == "Brian Edgington",
+            Count == "0-0") %>%
+            group_by(Pitcher, Count) %>%
+            summarize(Swings = sum(PitchCall %in% c("Foul", "FoulTip", "InPlay", "StrikeSwinging")),
+                      Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch")),
+                      .groups = "keep") %>%
+            ungroup() %>%
+            select(Swings, Takes) %>%
+            t() %>%
+            as.data.frame() %>%
+            mutate(vars = rownames(.))%>%
+            arrange(desc(vars)) %>%
+            mutate(V1 = na_if(V1, 0),
+                   prop = 100*V1/sum(V1),
+                   ypos = cumsum(prop)-0.5*prop) %>%
+            na.omit() %>%
+            ggplot(aes(x = "", y = prop, fill = vars)) +
+              geom_bar(stat = "identity", width = 1, color = "white") +
+              coord_polar("y", start = 0) +
+              labs(title = "Swing decisions") +
+              theme_void() +
+              theme(legend.title = element_blank(),
+                    plot.title = element_text(size = 13)) +
+              geom_text(aes(y = ypos, label = V1), color = "white", size = 4.75) +
+              scale_fill_manual(values = c(Swings = "#181C90", Takes = "#F78707"),
+                                labels = c("Swings", "Takes")),
+          
+          
+          allGames %>%
+            mutate(Count = paste(Balls, "-", Strikes, sep = "")) %>%
+            filter(PitchCall != "",
+            Pitcher == "Brian Edgington",
+            Count == "0-0") %>%
+            group_by(Pitcher, Count) %>%
+            summarize(Foul = sum(PitchCall == "Foul"),
+                      BIP = sum(PitchCall == "InPlay"),
+                      SwStr = sum(PitchCall == "StrikeSwinging"),
+                      .groups = "keep") %>%
+            ungroup() %>%
+            select(Foul, BIP, SwStr) %>%
+            t() %>%
+            as.data.frame() %>%
+            mutate(vars = rownames(.))%>%
+            arrange(desc(vars)) %>%
+            mutate(V1 = na_if(V1, 0),
+                   prop = 100*V1/sum(V1),
+                   ypos = cumsum(prop)-0.5*prop) %>%
+            na.omit() %>%
+            ggplot(aes(x = "", y = prop, fill = vars)) +
+              geom_bar(stat = "identity", width = 1, color = "white") +
+              coord_polar("y", start = 0) +
+              labs(title = "Swings") +
+              theme_void() +
+              theme(legend.title = element_blank(),
+                    plot.title = element_text(size = 13)) +
+              geom_text(aes(y = ypos, label = V1), color = "white", size = 4.75) +
+              scale_fill_manual(values = c(Foul = "#181C90", BIP = "#AEB7B3", SwStr = "#F78707"),
+                                labels = c("In Play", "Foul", "Swinging Strike")),
+      ncol = 2, widths = c(1, 1.12))
+```
+
+```{r}
+# Make pitch location by count plot
+allGames %>%
+  filter(PitchCall != "",
+         TaggedPitchType != "",
+         Pitcher == "Brian Edgington",
+         Balls == 0, 
+         Strikes == 0) %>%
+  ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+  geom_point(aes(color = RelSpeed), na.rm = TRUE) +
+  xlim(-2.5, 2.5) +
+  theme_bw() +
+  labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft)", color = "Velocity") +
+  geom_path(data = data.frame(x = c(-.95, -.95, .95, .95, -.95),
+                              y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+            aes(x = x, y = y)) +
+  scale_color_gradient(low = "#181C90", high = "#F78707") 
+```
 
 
