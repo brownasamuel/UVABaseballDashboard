@@ -7,9 +7,10 @@ files <- list.files(pattern = "*.csv")
 games <- lapply(files, read.csv, header = TRUE) 
 allGames <- bind_rows(games)
 
-
-#pitcher <- allGames[allGames$PitcherTeam=='Virginia 2023',]$Pitcher
-pitcher <- allGames$Pitcher
+virginia <-  allGames[allGames$PitcherTeam=='Virginia 2023',]
+pitcher <- virginia$Pitcher
+opponent <- virginia$BatterTeam
+type <- virginia$TaggedPitchType
 
 ui <- fluidPage(
   titlePanel("UVA Baseball Pitching Dashboard"),
@@ -44,7 +45,9 @@ ui <- fluidPage(
     # Page 1
     tabPanel(title = "Summaries",
              mainPanel(h6("Select pitcher below: "), 
-                          selectInput("pitcher", "Pitcher", choices = pitcher, selected = "Brian Edgington")),
+                          selectInput("pitcher", "Pitcher", choices = pitcher, selected = "Brian Edgington"),
+                          selectInput("opponent", "Opponent", choices = opponent, selected = "Navy"),
+                          selectInput("type", "Pitch Type", choices = type, selected = "Fastball")),
              fluidRow(
                verbatimTextOutput("myoutput")
              ),
@@ -80,10 +83,10 @@ server = function(input, output) {
   games <- lapply(files, read.csv, header = TRUE) 
   allGames <- bind_rows(games)
   
-  mydata <- read.csv("/Users/tylergorecki/Desktop/SASL/Borderline Pitches Project/NYY_data.csv")
   
   output$mytable <- DT::renderDataTable({
-    DT::datatable(allGames[allGames$PitcherTeam=='Virginia 2023', ])
+    DT::datatable(allGames[allGames$PitcherTeam=='Virginia 2023' & 
+                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent, 1:15])
   })
   
   output$myoutput <- renderPrint({
@@ -91,11 +94,17 @@ server = function(input, output) {
   })
   
   output$plot1 <- renderPlot({
-    plot(1,2)
+    data_subset = allGames[allGames$PitcherTeam=='Virginia 2023' & 
+                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent &
+                             allGames$TaggedPitchType==input$type, ]
+    
+    ggplot(data_subset, aes(x=PitchNo, y=RelSpeed )) + geom_point(size = 3)
   })
   
   output$plot2 <- renderPlot({
-    plot(2,1)
+    data_subset = allGames[allGames$PitcherTeam=='Virginia 2023' & 
+                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent, ]
+    ggplot(data_subset, aes(x=x0, y=z0, color = TaggedPitchType, )) + geom_point()
   })
 }
 
