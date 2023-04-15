@@ -15,11 +15,6 @@ library(kableExtra)
 
 ```{r}
 ### Read in data
-#files <- list.files(pattern = "*.csv")
-#games <- lapply(files, read.csv, header = TRUE) 
-
-#allPitches <- bind_rows(games)
-
 allPitches <- read.csv("2023 Season Data.csv")
 ```
 
