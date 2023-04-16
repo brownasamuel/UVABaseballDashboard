@@ -56,23 +56,28 @@ ui <- fluidPage(
   navbarPage(
     title = " ",
     # Page 1
-    tabPanel(title = "Summaries",
-             mainPanel(h6("Select pitcher below: "), 
-                       selectizeInput("pitcher", "Pitcher", 
-                                      choices = pitcher, 
-                                      options = list(maxOptions = 5, 
-                                                     placeholder = 'Please select an option below',
-                                                     onInitialize = I('function() { this.setValue(""); }'))),
-                       
-                       uiOutput("Opponent"),
-                       
-                       uiOutput("PType1"),
-                       # splitLayout
-                       
-                       conditionalPanel("input.PitchType1 != ''",
-                              DT::dataTableOutput("mytable"))
-                       
-                       ),
+    tabPanel(title = "Game Summaries",
+             sidebarLayout(
+               sidebarPanel(width = 4,
+                            selectizeInput("pitcher", "Select a Pitcher", 
+                                        choices = pitcher, 
+                                        options = list(maxOptions = 5, 
+                                                       placeholder = 'Please select an option below',
+                                                       onInitialize = I('function() { this.setValue(""); }'))),
+                         
+                         uiOutput("Opponent"),
+                         
+                         uiOutput("PType1")),
+               
+               mainPanel(width = 8,
+                         
+                         br(),
+                         # splitLayout
+                         
+                         conditionalPanel("input.PitchType1 != ''",
+                                DT::dataTableOutput("mytable"), style = "width: 20%, font-size: 25%")
+                         
+                         )),
              
              )
     )
@@ -108,29 +113,30 @@ server = function(input, output) {
   
   
   output$mytable <- DT::renderDataTable({
-    DT::datatable(virginia %>%
-                    filter(PitchCall != "",
-                           TaggedPitchType == input$PitchType1,
-                           Pitcher == input$pitcher,
-                           opponent == input$opponent) %>%
-                    group_by(Pitcher, TaggedPitchType) %>%
-                    summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
-                                           "-",
-                                          round(quantile(RelSpeed, .75), 1)),
-                              'Total Pitches' = n(),
-                              Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
-                              Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
-                              Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
-                              Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
-                              SwStr = sum(PitchCall == "StrikeSwinging"),
-                              WhiffPerc = 100*round(SwStr/Swings, 3),
-                              HR = sum(PlayResult == "HomeRun"),
-                              BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
-                                sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
-                                      (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
-                              .groups = "keep") %>%
-                    rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType) )
-  })
+    datatable(virginia %>%
+       filter(PitchCall != "",
+              TaggedPitchType == input$PitchType1,
+              Pitcher == input$pitcher,
+              opponent == input$opponent) %>%
+       group_by(Pitcher, TaggedPitchType) %>%
+       summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
+                              "-",
+                             round(quantile(RelSpeed, .75), 1)),
+                 'Total Pitches' = n(),
+                 Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
+                 Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
+                 Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                 Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
+                 SwStr = sum(PitchCall == "StrikeSwinging"),
+                 WhiffPerc = 100*round(SwStr/Swings, 3),
+                 HR = sum(PlayResult == "HomeRun"),
+                 BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                   sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                         (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                 .groups = "keep") %>%
+       rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
+       options = list(scrollX = T))
+    })
   
   
 }
