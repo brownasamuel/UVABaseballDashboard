@@ -1,5 +1,4 @@
 ---
-title: "Wahoowa"
 output: html_document
 runtime: shiny
 ---
@@ -58,7 +57,7 @@ ui <- fluidPage(
     # Page 1
     tabPanel(title = "Game Summaries",
              sidebarLayout(
-               sidebarPanel(width = 4,
+               sidebarPanel(width = 3,
                             selectizeInput("pitcher", "Select a Pitcher", 
                                         choices = pitcher, 
                                         options = list(maxOptions = 5, 
@@ -69,13 +68,16 @@ ui <- fluidPage(
                          
                          uiOutput("PType1")),
                
-               mainPanel(width = 8,
+               mainPanel(width = 9,
+                         
+                         conditionalPanel("input.PitchType1 != ''",
+                                div(plotOutput("pitchZone"))),
                          
                          br(),
                          # splitLayout
                          
                          conditionalPanel("input.PitchType1 != ''",
-                                div(DT::dataTableOutput("mytable"), style = "font-size: 45%; width: 105%"))
+                                div(DT::dataTableOutput("mytable"), style = "font-size: 70%; width: 100%"))
                          )),
              
              )
@@ -109,7 +111,24 @@ server = function(input, output) {
                                                    onInitialize = I('function() { this.setValue(""); }'))))
   })
   
-  
+  output$pitchZone <- renderPlot(
+    virginia %>%
+      filter(PitchCall != "",
+             Pitcher == input$pitcher,
+             opponent == input$opponent,
+             TaggedPitchType == input$PitchType1) %>%
+      ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+      geom_point(aes(color = RelSpeed), na.rm = TRUE) +
+      xlim(-2.5, 2.5) +
+      theme_bw() +
+      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft)", color = "Velocity") +
+      geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
+                                  y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+                aes(x = x, y = y)) +
+      scale_color_gradient(low = "#181C90", high = "#F78707") +
+      facet_grid(. ~ TaggedPitchType) +
+      coord_equal()
+  )
   
   output$mytable <- DT::renderDataTable({
     datatable(virginia %>%
@@ -140,6 +159,6 @@ server = function(input, output) {
   
 }
 
-shinyApp(ui, server, options = list(height = 630, width = 980))
+shinyApp(ui, server, options = list(height = 920, width = 980))
 ```
 
