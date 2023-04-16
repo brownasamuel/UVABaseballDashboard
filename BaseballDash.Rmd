@@ -10,6 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(shiny)
 library(DT)
+library(knitr)
+library(ggpubr)
+library(kableExtra)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -19,7 +22,6 @@ virginia <-  allGames %>%
   mutate(opponent = paste(BatterTeam, sub("/2023", "", Date))) %>%
   select(-c(50:167))
 pitcher <- unique(virginia$Pitcher)
-type <- unique(virginia$TaggedPitchType)
 ```
 
 ```{r, echo = FALSE}
@@ -56,74 +58,81 @@ ui <- fluidPage(
     # Page 1
     tabPanel(title = "Summaries",
              mainPanel(h6("Select pitcher below: "), 
-                          selectizeInput("pitcher", "Pitcher", 
-                                         choices = pitcher, 
-                                         options = list(maxOptions = 5, 
-                                                        placeholder = 'Please select an option below',
-                                                        onInitialize = I('function() { this.setValue(""); }'))),
+                       selectizeInput("pitcher", "Pitcher", 
+                                      choices = pitcher, 
+                                      options = list(maxOptions = 5, 
+                                                     placeholder = 'Please select an option below',
+                                                     onInitialize = I('function() { this.setValue(""); }'))),
                        
-                          conditionalPanel("input.pitcher != '' ",
-                            selectizeInput("opponent", "Opponent", 
-                                           choices = virginia %>% 
-                                             filter(Pitcher == input.pitcher) %>% 
-                                             pull(opponent) %>% 
-                                             unique(),
-                                           options = list(maxOptions = 5, 
-                                                          placeholder = 'Please select an option below',
-                                                          onInitialize = I('function() { this.setValue(""); }')))),
+                       uiOutput("Opponent"),
                        
-                          conditionalPanel("input.opponent != '' ",
-                            selectizeInput("type", "Pitch Type", 
-                                           choices = type, 
-                                           options = list(maxOptions = 5, 
-                                                          placeholder = 'Please select an option below',
-                                                          onInitialize = I('function() { this.setValue(""); }')))),
-             fluidRow(
-               column(12, p("This is the content for Page 1."))
-             ), 
-             splitLayout(
-               plotOutput("plot1"), 
-               plotOutput("plot2")
-             )
-    ),
-    # Page 2
-    tabPanel("Full Season",
-             mainPanel(
-               DT::dataTableOutput("mytable")
-             )
-    ),
-    # Page 3
-    tabPanel("Other Data",
-             fluidRow(
-               column(6, h2("Welcome to Page 3!"))
-             ),
-             fluidRow(
-               column(12, p("This is the content for Page 3."))
+                       uiOutput("PType1"),
+                       # splitLayout
+                       
+                       conditionalPanel("input.PitchType1 != ''",
+                              DT::dataTableOutput("mytable"))
+                       
+                       ),
+             
              )
     )
   )
-))
 
 server = function(input, output) {
   
+  output$Opponent <- renderUI({
+    conditionalPanel("input.pitcher != '' ",
+                     selectizeInput("opponent", "Opponent", 
+                                    choices = virginia %>% 
+                                      filter(Pitcher == input$pitcher) %>% 
+                                      pull(opponent) %>% 
+                                      unique(),
+                                    options = list(maxOptions = 5, 
+                                                   placeholder = 'Please select an option below',
+                                                   onInitialize = I('function() { this.setValue(""); }'))))
+  })
+  
+  output$PType1 <- renderUI({
+    conditionalPanel("input.opponent != '' ",
+                     selectizeInput("PitchType1", "Pitch Type", 
+                                    choices = virginia %>% 
+                                      filter(Pitcher == input$pitcher,
+                                             opponent == input$opponent) %>% 
+                                      pull(TaggedPitchType) %>% 
+                                      unique(), 
+                                    options = list(maxOptions = 5, 
+                                                   placeholder = 'Please select an option below',
+                                                   onInitialize = I('function() { this.setValue(""); }'))))
+  })
+  
+  
+  
   output$mytable <- DT::renderDataTable({
-    DT::datatable(allGames[allGames$PitcherTeam=='Virginia 2023' & 
-                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent, 1:15])
+    DT::datatable(virginia %>%
+                    filter(PitchCall != "",
+                           TaggedPitchType == input$PitchType1,
+                           Pitcher == input$pitcher,
+                           opponent == input$opponent) %>%
+                    group_by(Pitcher, TaggedPitchType) %>%
+                    summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
+                                           "-",
+                                          round(quantile(RelSpeed, .75), 1)),
+                              'Total Pitches' = n(),
+                              Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
+                              Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
+                              Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                              Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
+                              SwStr = sum(PitchCall == "StrikeSwinging"),
+                              WhiffPerc = 100*round(SwStr/Swings, 3),
+                              HR = sum(PlayResult == "HomeRun"),
+                              BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                                sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                                      (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                              .groups = "keep") %>%
+                    rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType) )
   })
   
-  output$plot1 <- renderPlot({
-    data_subset = allGames[allGames$PitcherTeam=='Virginia 2023' & 
-                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent &
-                             allGames$TaggedPitchType==input$type, ]
-    
-    ggplot(data_subset, aes(x=PitchNo, y=RelSpeed )) + geom_point(size = 3)
-  })
   
-  output$plot2 <- renderPlot({
-    data_subset = allGames[allGames$PitcherTeam=='Virginia 2023' & 
-                             allGames$Pitcher==input$pitcher & allGames$BatterTeam == input$opponent, ]
-    ggplot(data_subset, aes(x=x0, y=z0, color = TaggedPitchType, )) + geom_point()
-  })
 }
 
 shinyApp(ui, server, options = list(height = 630, width = 980))
