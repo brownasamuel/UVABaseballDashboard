@@ -6,9 +6,11 @@ runtime: shiny
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # Load packages
-library(tidyverse)
+library(ggplot2)
+library(dplyr)
 library(shiny)
 library(DT)
+library(shinyWidgets)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -17,7 +19,6 @@ virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
   mutate(opponent = paste(BatterTeam, sub("/2023", "", Date))) %>%
   select(-c(50:167))
-pitcher <- unique(virginia$Pitcher)
 ```
 
 ```{r, echo = FALSE}
@@ -51,14 +52,14 @@ ui <- fluidPage(
   ),
   navbarPage(
     title = " ",
-    # Page 1
+    ### Tab 1- Game Summaries
     tabPanel(title = "Game Summaries",
              sidebarLayout(
                sidebarPanel(width = 4,
                             selectizeInput("pitcher", "Select a Pitcher", 
-                                        choices = pitcher, 
-                                        options = list(placeholder = 'Please select an option below',
-                                                       onInitialize = I('function() { this.setValue(""); }'))),
+                                           choices = unique(virginia$Pitcher), 
+                                           options = list(placeholder = 'Please select an option below',
+                                                          onInitialize = I('function() { this.setValue(""); }'))),
                          
                          uiOutput("Opponent"),
                          
@@ -80,36 +81,43 @@ ui <- fluidPage(
              
              
              )
+    
+    ### Tab 2- Player profiles
+   
+    
     )
   )
 
 server = function(input, output) {
+  ##################################################################################################################
+  ### Tab 1
   
+  # Select opponent bar
   output$Opponent <- renderUI({
     conditionalPanel("input.pitcher != '' ",
-                     selectizeInput("opponent", "Game", 
-                                    choices = c(virginia %>% 
-                                      filter(Pitcher %in% input$pitcher) %>% 
-                                      pull(opponent) %>% 
-                                      unique()),
-                                    options = list(placeholder = 'Please select an option below',
-                                                   onInitialize = I('function() { this.setValue(""); }')),
-                                    multiple = TRUE))
+                     pickerInput("opponent", "Game", 
+                                 choices = c(virginia %>% 
+                                               filter(Pitcher %in% input$pitcher) %>% 
+                                               pull(opponent) %>% 
+                                               unique()),
+                                 options = list('actions-box' = TRUE),
+                                 multiple = TRUE))
   })
   
+  # Select Pitch type bar
   output$PType1 <- renderUI({
     conditionalPanel("input.opponent != '' ",
-                     selectizeInput("PitchType1", "Pitch Type", 
-                                    choices = virginia %>% 
-                                      filter(Pitcher %in% input$pitcher,
-                                             opponent %in% input$opponent) %>% 
-                                      pull(TaggedPitchType) %>% 
-                                      unique(), 
-                                    options = list(placeholder = 'Please select an option below',
-                                                   onInitialize = I('function() { this.setValue(""); }')),
-                                    multiple = TRUE))
+                     pickerInput("PitchType1", "Pitch Type", 
+                                 choices = virginia %>% 
+                                   filter(Pitcher %in% input$pitcher,
+                                          opponent %in% input$opponent) %>% 
+                                   pull(TaggedPitchType) %>% 
+                                   unique(), 
+                                 options = list('actions-box' = TRUE),
+                                 multiple = TRUE))
   })
   
+  # Zone plot of pitches
   output$pitchZone <- renderPlot(
     virginia %>%
       filter(PitchCall != "",
@@ -120,7 +128,7 @@ server = function(input, output) {
       geom_point(aes(color = RelSpeed), na.rm = TRUE) +
       xlim(-2.5, 2.5) +
       theme_bw() +
-      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft)", color = "Velocity") +
+      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Velocity") +
       geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
                                   y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
                 aes(x = x, y = y)) +
@@ -129,15 +137,17 @@ server = function(input, output) {
       coord_equal()
   )
   
+  # Pitch results table
   output$mytable <- DT::renderDataTable({
     datatable(virginia %>%
        filter(PitchCall != "",
               Pitcher %in% input$pitcher,
               opponent %in% input$opponent) %>%
        group_by(Pitcher, TaggedPitchType) %>%
-       summarize(Velo = paste(round(quantile(RelSpeed, .25), 1), 
-                              "-",
-                             round(quantile(RelSpeed, .75), 1)),
+       summarize('Sitting Velo' = paste(round(quantile(RelSpeed, .25), 1), 
+                                        "-",
+                                        round(quantile(RelSpeed, .75), 1)),
+                 'Max Velo' = round(max(RelSpeed), 1),
                  'Total Pitches' = n(),
                  Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
                  Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
@@ -152,6 +162,11 @@ server = function(input, output) {
                  .groups = "keep") %>%
        rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
        options = list(scrollX = T))
+    
+    ################################################################################################################
+    ### Tab 2
+    
+    
     })
   
   
@@ -159,6 +174,6 @@ server = function(input, output) {
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 # Tab ideas:
-# Game summaries, pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location)
+# Game summaries(Add filters for batter handedness, results of the pitch), player profiles(stats for season), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location)
 ```
 
