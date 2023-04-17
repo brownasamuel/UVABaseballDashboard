@@ -57,7 +57,7 @@ ui <- fluidPage(
     # Page 1
     tabPanel(title = "Game Summaries",
              sidebarLayout(
-               sidebarPanel(width = 3,
+               sidebarPanel(width = 4,
                             selectizeInput("pitcher", "Select a Pitcher", 
                                         choices = pitcher, 
                                         options = list(maxOptions = 5, 
@@ -68,17 +68,20 @@ ui <- fluidPage(
                          
                          uiOutput("PType1")),
                
-               mainPanel(width = 9,
+               mainPanel(width = 8,
                          
                          conditionalPanel("input.PitchType1 != ''",
-                                div(plotOutput("pitchZone"))),
+                                div(plotOutput("pitchZone")))
                          
-                         br(),
-                         # splitLayout
-                         
-                         conditionalPanel("input.PitchType1 != ''",
-                                div(DT::dataTableOutput("mytable"), style = "font-size: 70%; width: 100%"))
                          )),
+             
+             fluidRow(
+               column(12,
+                      conditionalPanel("input.PitchType1 != ''",
+                                       div(DT::dataTableOutput("mytable"), style = "font-size: 70%; width: 100%"))
+                      )
+               ),
+             
              
              )
     )
