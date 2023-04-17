@@ -14,7 +14,7 @@ library(ggpubr)
 library(kableExtra)
 
 # Read in data
-allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
+allGames <- read.csv("2023 Season Data.csv")
 
 virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
