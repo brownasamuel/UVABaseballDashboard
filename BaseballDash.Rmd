@@ -12,6 +12,7 @@ library(shiny)
 library(DT)
 library(shinyWidgets)
 library(magick)
+library(rvest)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -20,6 +21,21 @@ virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
   mutate(opponent = paste(BatterTeam, sub("/2023", "", Date))) %>%
   select(-c(50:167))
+
+find_pic <- function(name){
+  tmpfile <- read_html(paste("https://virginiasports.com/player/", 
+                             sub(" ", "-", name) %>% tolower(), 
+                             "/",
+                             sep = "")) %>%
+      html_nodes(xpath = '//*[@class="bio-info"]') %>%
+      html_elements("img") %>%
+      html_attr("src") %>%
+      image_read() %>%
+      image_write(tempfile(fileext='jpg'), format = 'jpg')
+    
+    # Return a list
+    list(src = tmpfile, contentType = "image/jpeg")
+}
 ```
 
 ```{r, echo = FALSE}
@@ -87,12 +103,12 @@ ui <- fluidPage(
               tabPanel(title = "Connelly Early",
                        fluidRow(
                          column(2,
-                                htmlOutput("pic"),
+                                imageOutput("pic_CE"),
                                 offset = 4))),
               tabPanel(title = "Kevin Jaxel",
                        fluidRow(
                          column(2,
-                                imageOutput("pic2", width = "10%"),
+                                imageOutput("pic_KJ", height = "10%", width = "10%"),
                                 offset = 4)))
               )
    )
@@ -176,21 +192,12 @@ server = function(input, output) {
   
   ################################################################################################################
   ### Tab 2
-  # Player profile pic
-  output$pic <- renderText({
-    c('<img src="', 
-      "https://virginiasports.com/imgproxy/8bzkotY2slipAezVAVPqVJn8S4Xqrlo6vLJ6rxFN1jc/fit/600/800/ce/0/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL3Zpcmdpbmlhc3BvcnRzLWNvbS8yMDIyLzEwL2QxMDliMGZhLWVhcmx5X2Nvbm5lbGx5XzIzbS1lMTY2NTc1NjM4Mzc2Ni5qcGc.jpg", 
-      '">')
+  # Player profile pics
+  output$pic_CE <- renderImage({
+    find_pic("Connelly Early")
     })
-  
-  output$pic2 <- renderImage({
-    tmpfile <- image_read("https://virginiasports.com/imgproxy/8bzkotY2slipAezVAVPqVJn8S4Xqrlo6vLJ6rxFN1jc/fit/600/800/ce/0/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL3Zpcmdpbmlhc3BvcnRzLWNvbS8yMDIyLzEwL2QxMDliMGZhLWVhcmx5X2Nvbm5lbGx5XzIzbS1lMTY2NTc1NjM4Mzc2Ni5qcGc.jpg") %>%
-      image_write(tempfile(fileext='jpg'), format = 'jpg')
-    
-    # Return a list
-    list(src = tmpfile, contentType = "image/jpeg")
-    
-    
+  output$pic_KJ <- renderImage({
+    find_pic("Kevin Jaxel")
   })
   
 }
