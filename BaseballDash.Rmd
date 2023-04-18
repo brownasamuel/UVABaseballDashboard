@@ -11,6 +11,7 @@ library(dplyr)
 library(shiny)
 library(DT)
 library(shinyWidgets)
+library(magick)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -66,10 +67,8 @@ ui <- fluidPage(
                          uiOutput("PType1")),
                
                mainPanel(width = 8,
-                         
                          conditionalPanel("input.PitchType1 != ''",
                                 div(plotOutput("pitchZone")))
-                         
                          )),
              
              fluidRow(
@@ -77,15 +76,26 @@ ui <- fluidPage(
                       conditionalPanel("input.PitchType1 != ''",
                                        div(DT::dataTableOutput("mytable"), style = "font-size: 70%; width: 100%"))
                       )
-               ),
+               )
              
              
-             )
+             ),
     
     ### Tab 2- Player profiles
-   
-    
-    )
+   navbarMenu(title = "Player Profiles",
+              # Put in sub tabs
+              tabPanel(title = "Connelly Early",
+                       fluidRow(
+                         column(2,
+                                imageOutput("pic"),
+                                offset = 4))),
+              tabPanel(title = "Kevin Jaxel",
+                       fluidRow(
+                         column(2,
+                                imageOutput("pic", width = "10%"),
+                                offset = 4)))
+              )
+   )
   )
 
 server = function(input, output) {
@@ -162,13 +172,18 @@ server = function(input, output) {
                  .groups = "keep") %>%
        rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
        options = list(scrollX = T))
-    
-    ################################################################################################################
-    ### Tab 2
-    
-    
-    })
+  })
   
+  ################################################################################################################
+  ### Tab 2
+  # Player profile pic
+  output$pic <- renderImage({
+    tmpfile <- image_read("https://virginiasports.com/imgproxy/8bzkotY2slipAezVAVPqVJn8S4Xqrlo6vLJ6rxFN1jc/fit/600/800/ce/0/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL3Zpcmdpbmlhc3BvcnRzLWNvbS8yMDIyLzEwL2QxMDliMGZhLWVhcmx5X2Nvbm5lbGx5XzIzbS1lMTY2NTc1NjM4Mzc2Ni5qcGc.jpg") %>%
+      image_write(tempfile(fileext='jpg'), format = 'jpg')
+    
+    # Return a list
+    list(src = tmpfile, contentType = "image/jpeg")
+  })
   
 }
 
