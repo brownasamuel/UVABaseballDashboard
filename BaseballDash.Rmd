@@ -87,12 +87,12 @@ ui <- fluidPage(
               tabPanel(title = "Connelly Early",
                        fluidRow(
                          column(2,
-                                imageOutput("pic"),
+                                htmlOutput("pic"),
                                 offset = 4))),
               tabPanel(title = "Kevin Jaxel",
                        fluidRow(
                          column(2,
-                                imageOutput("pic", width = "10%"),
+                                imageOutput("pic2", width = "10%"),
                                 offset = 4)))
               )
    )
@@ -177,12 +177,20 @@ server = function(input, output) {
   ################################################################################################################
   ### Tab 2
   # Player profile pic
-  output$pic <- renderImage({
+  output$pic <- renderText({
+    c('<img src="', 
+      "https://virginiasports.com/imgproxy/8bzkotY2slipAezVAVPqVJn8S4Xqrlo6vLJ6rxFN1jc/fit/600/800/ce/0/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL3Zpcmdpbmlhc3BvcnRzLWNvbS8yMDIyLzEwL2QxMDliMGZhLWVhcmx5X2Nvbm5lbGx5XzIzbS1lMTY2NTc1NjM4Mzc2Ni5qcGc.jpg", 
+      '">')
+    })
+  
+  output$pic2 <- renderImage({
     tmpfile <- image_read("https://virginiasports.com/imgproxy/8bzkotY2slipAezVAVPqVJn8S4Xqrlo6vLJ6rxFN1jc/fit/600/800/ce/0/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL3Zpcmdpbmlhc3BvcnRzLWNvbS8yMDIyLzEwL2QxMDliMGZhLWVhcmx5X2Nvbm5lbGx5XzIzbS1lMTY2NTc1NjM4Mzc2Ni5qcGc.jpg") %>%
       image_write(tempfile(fileext='jpg'), format = 'jpg')
     
     # Return a list
     list(src = tmpfile, contentType = "image/jpeg")
+    
+    
   })
   
 }
