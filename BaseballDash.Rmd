@@ -34,7 +34,7 @@ find_pic <- function(name){
       image_write(tempfile(fileext='jpg'), format = 'jpg')
     
     # Return a list
-    list(src = tmpfile, contentType = "image/jpeg")
+    list(src = tmpfile, contentType = "image/jpeg", width = 200, height = 260)
 }
 ```
 
@@ -103,13 +103,11 @@ ui <- fluidPage(
               tabPanel(title = "Connelly Early",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_CE"),
-                                offset = 4))),
+                                imageOutput("pic_CE")))),
               tabPanel(title = "Kevin Jaxel",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_KJ", height = "10%", width = "10%"),
-                                offset = 4)))
+                                imageOutput("pic_KJ"))))
               )
    )
   )
@@ -195,10 +193,10 @@ server = function(input, output) {
   # Player profile pics
   output$pic_CE <- renderImage({
     find_pic("Connelly Early")
-    })
+    }, deleteFile = TRUE)
   output$pic_KJ <- renderImage({
     find_pic("Kevin Jaxel")
-  })
+  }, deleteFile = TRUE)
   
 }
 
