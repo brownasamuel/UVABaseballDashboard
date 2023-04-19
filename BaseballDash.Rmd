@@ -202,6 +202,6 @@ server = function(input, output) {
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 # Tab ideas:
-# Game summaries(Add filters for batter handedness, results of the pitch), player profiles(stats for season), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location)
+# Game summaries(Add filters for batter handedness, results of the pitch), player profiles(stats for season along with pitch tunneling), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location)
 ```
 
