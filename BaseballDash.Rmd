@@ -116,7 +116,6 @@ ui <- fluidPage(
 server = function(input, output) {
   ##################################################################################################################
   ### Tab 1- Game Summaries
-  
   # Select opponent bar
   output$Opponent <- renderUI({
     conditionalPanel("input.pitcher != '' ",
@@ -198,7 +197,6 @@ server = function(input, output) {
                      find_pic(input$Dash)
                      }, deleteFile = TRUE)
   })
-  
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
