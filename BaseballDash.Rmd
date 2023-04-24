@@ -14,6 +14,7 @@ library(shinyWidgets)
 library(magick)
 library(rvest)
 library(stringr)
+library(janitor)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -23,6 +24,7 @@ virginia <-  allGames %>%
   mutate(opponent = paste(BatterTeam, sub("/2023", "", Date))) %>%
   select(-c(50:167))
 
+# Get a player's picture
 find_pic <- function(name){
   tmpfile <- read_html(paste("https://virginiasports.com/player/", 
                              sub(" ", "-", name) %>% tolower(), 
@@ -36,6 +38,26 @@ find_pic <- function(name){
     
     # Return a list
     list(src = tmpfile, contentType = "image/jpeg", width = 200, height = 260)
+}
+
+# Get a player's stats
+raw_text <- map("https://static.virginiasports.com/custompages/sports/m-basebl/stats/2022-2023/SeasonStats.pdf?_gl=1*11rpgpg*_ga*MTg1NjExNzA0NC4xNjgwMTg0ODQy*_ga_X9RVV1P9QW*MTY4MTkyNDQ1Ni4xMC4xLjE2ODE5MjQ4NDUuNjAuMC4w&_ga=2.154379455.640199771.1681924456-1856117044.1680184842", 
+                pdf_text)[[1]]
+pit_stats <- str_split(raw_text, "\n")[[1]][46:63] %>%
+  str_squish() %>%
+  sub(".*?\\d ", "", x = .) %>%
+  sub(" ", "", x = .) %>%
+  sub("Playerera", "Player era", x = .) %>%
+  data.frame() %>%
+  slice(-5) %>%
+  row_to_names(row_number = 1) %>%
+  separate(names(.), into = str_split(names(.), " ")[[1]], sep = " ") %>%
+  mutate(Player = gsub('([[:upper:]])', ' \\1', Player),
+         Player = trimws(Player)) 
+
+find_stats <- function(name){
+  pit_stats %>%
+    filter(Player == name)
 }
 ```
 
@@ -104,11 +126,13 @@ ui <- fluidPage(
               tabPanel(title = "Connelly Early", value = "Connelly Early",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_CE")))),
+                                imageOutput("pic_CE"),
+                                dataTableOutput("stats_CE")))),
               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_KJ"))))
+                                imageOutput("pic_KJ"),
+                                dataTableOutput("stats_KJ"))))
               )
    )
   )
@@ -197,6 +221,14 @@ server = function(input, output) {
                      find_pic(input$Dash)
                      }, deleteFile = TRUE)
   })
+  
+  observe({
+    output[[paste0("stats_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                     find_stats(input$Dash)
+                     })
+  })
+  
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
