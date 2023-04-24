@@ -13,6 +13,7 @@ library(DT)
 library(shinyWidgets)
 library(magick)
 library(rvest)
+library(stringr)
 
 # Read in data
 allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
@@ -68,7 +69,7 @@ ui <- fluidPage(
     )
   ),
   navbarPage(
-    title = " ",
+    title = " ", id = "Dash",
     ### Tab 1- Game Summaries
     tabPanel(title = "Game Summaries",
              sidebarLayout(
@@ -100,11 +101,11 @@ ui <- fluidPage(
     ### Tab 2- Player profiles
    navbarMenu(title = "Player Profiles",
               # Put in sub tabs
-              tabPanel(title = "Connelly Early",
+              tabPanel(title = "Connelly Early", value = "Connelly Early",
                        fluidRow(
                          column(2,
                                 imageOutput("pic_CE")))),
-              tabPanel(title = "Kevin Jaxel",
+              tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                        fluidRow(
                          column(2,
                                 imageOutput("pic_KJ"))))
@@ -114,7 +115,7 @@ ui <- fluidPage(
 
 server = function(input, output) {
   ##################################################################################################################
-  ### Tab 1
+  ### Tab 1- Game Summaries
   
   # Select opponent bar
   output$Opponent <- renderUI({
@@ -189,14 +190,14 @@ server = function(input, output) {
   })
   
   ################################################################################################################
-  ### Tab 2
+  ### Tab 2- Profiles
   # Player profile pics
-  output$pic_CE <- renderImage({
-    find_pic("Connelly Early")
-    }, deleteFile = TRUE)
-  output$pic_KJ <- renderImage({
-    find_pic("Kevin Jaxel")
-  }, deleteFile = TRUE)
+  observe({
+    output[[paste0("pic_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderImage({
+                     find_pic(input$Dash)
+                     }, deleteFile = TRUE)
+  })
   
 }
 
