@@ -120,19 +120,21 @@ ui <- fluidPage(
              
              ),
     
-    ### Tab 2- Player profiles
+    ### Tab 2- Player profiles(Should I add in a header to each?)
    navbarMenu(title = "Player Profiles",
               # Put in sub tabs
               tabPanel(title = "Connelly Early", value = "Connelly Early",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_CE"),
-                                dataTableOutput("stats_CE")))),
+                                imageOutput("pic_CE")),
+                         column(9,
+                                div(dataTableOutput("stats_CE"), style = "font-size: 80%; width: 60%")))),
               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                        fluidRow(
                          column(2,
-                                imageOutput("pic_KJ"),
-                                dataTableOutput("stats_KJ"))))
+                                imageOutput("pic_KJ")),
+                         column(9,
+                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%; width: 100%"))))
               )
    )
   )
@@ -225,7 +227,7 @@ server = function(input, output) {
   observe({
     output[[paste0("stats_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
-                     find_stats(input$Dash)
+                     datatable(find_stats(input$Dash), rownames = FALSE)
                      })
   })
   
