@@ -6,14 +6,13 @@ runtime: shiny
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # Load packages
-library(ggplot2)
-library(dplyr)
+library(tidyverse)
 library(shiny)
 library(DT)
 library(shinyWidgets)
 library(magick)
 library(rvest)
-library(stringr)
+library(pdftools)
 library(janitor)
 
 # Read in data
@@ -122,19 +121,21 @@ ui <- fluidPage(
     
     ### Tab 2- Player profiles(Should I add in a header to each?)
    navbarMenu(title = "Player Profiles",
-              # Put in sub tabs
+              # Put in sub tabs for each player
               tabPanel(title = "Connelly Early", value = "Connelly Early",
                        fluidRow(
                          column(2,
                                 imageOutput("pic_CE")),
                          column(9,
-                                div(dataTableOutput("stats_CE"), style = "font-size: 80%; width: 60%")))),
+                                div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
+                       # Put in options for what to look at(For now just do stamina)
+                       fluidRow()),
               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                        fluidRow(
                          column(2,
                                 imageOutput("pic_KJ")),
                          column(9,
-                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%; width: 100%"))))
+                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))))
               )
    )
   )
@@ -153,7 +154,6 @@ server = function(input, output) {
                                  options = list('actions-box' = TRUE),
                                  multiple = TRUE))
   })
-  
   # Select Pitch type bar
   output$PType1 <- renderUI({
     conditionalPanel("input.opponent != '' ",
@@ -166,7 +166,6 @@ server = function(input, output) {
                                  options = list('actions-box' = TRUE),
                                  multiple = TRUE))
   })
-  
   # Zone plot of pitches
   output$pitchZone <- renderPlot(
     virginia %>%
@@ -186,7 +185,6 @@ server = function(input, output) {
       facet_grid(. ~ TaggedPitchType) +
       coord_equal()
   )
-  
   # Pitch results table
   output$mytable <- DT::renderDataTable({
     datatable(virginia %>%
@@ -223,7 +221,7 @@ server = function(input, output) {
                      find_pic(input$Dash)
                      }, deleteFile = TRUE)
   })
-  
+  # Player stats
   observe({
     output[[paste0("stats_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
