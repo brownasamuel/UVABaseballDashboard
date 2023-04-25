@@ -129,13 +129,26 @@ ui <- fluidPage(
                          column(9,
                                 div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
                        # Put in options for what to look at(For now just do stamina)
-                       fluidRow()),
+                       tabsetPanel(tabPanel(title = "Durability", value = "durab",
+                                            fluidRow(column(6, plotOutput("pc_graph_CE")),
+                                                     column(6, 
+                                                            div(dataTableOutput("pc_table_CE"), 
+                                                                style = "font-size: 80%"))))
+                                   )
+                       ),
               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                        fluidRow(
                          column(2,
                                 imageOutput("pic_KJ")),
                          column(9,
-                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))))
+                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
+                       tabsetPanel(tabPanel(title = "Durability", value = "durab",
+                                            fluidRow(column(6, plotOutput("pc_graph_KJ")),
+                                                     column(6, 
+                                                            div(dataTableOutput("pc_table_KJ"), 
+                                                                style = "font-size: 80%"))))
+                                   )
+                       )
               )
    )
   )
@@ -228,11 +241,64 @@ server = function(input, output) {
                      datatable(find_stats(input$Dash), rownames = FALSE)
                      })
   })
+  ##########################
+  ### Inner tab 1- Durability
+  # Pitch count velo graph
+  observe({
+    output[[paste0("pc_graph_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
+                     allPitches %>%
+                       mutate(ct = 1) %>%
+                       group_by(Pitcher, Date) %>%
+                       mutate(pc = cumsum(ct)) %>%
+                       ungroup() %>%
+                       mutate(pc_range = ceiling(pc/5),
+                              pc_range = cut(pc,
+                                              seq(0, 200, 5),
+                                              labels = FALSE)) %>%
+                       filter(TaggedPitchType == "Fastball", 
+                              Pitcher == gsub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       group_by(Pitcher, pc_range) %>%
+                       summarize(avg_velo = mean(RelSpeed),
+                                 ct = n()) %>%
+                       ungroup() %>%
+                       mutate(pc_range2 = paste((pc_range - 1) * 5 + 1, pc_range * 5, sep = "-"),
+                              pc_range2 = factor(pc_range2, levels = pc_range2)) %>%
+                       ggplot(aes(x = pc_range2, y = avg_velo)) +
+                       geom_point() +
+                       theme_bw() +
+                       labs(title = paste(input$Dash, "Average Velo by pitch count"), 
+                            x = "Pitch Count", y = "Fastball Velo") +
+                       theme(axis.text.x = element_text(size = 11))
+                     })
+  })
+  # Pitch count velo table
+  observe({
+    output[[paste0("pc_table_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                     allPitches %>%
+                       mutate(ct = 1) %>%
+                       group_by(Pitcher, Date) %>%
+                       mutate(pc = cumsum(ct)) %>%
+                       ungroup() %>%
+                       mutate(pc_range = ceiling(pc/5),
+                              pc_range = cut(pc,
+                                              seq(0, 200, 5),
+                                              labels = FALSE)) %>%
+                       filter(TaggedPitchType == "Fastball", 
+                              Pitcher == gsub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       group_by(Pitcher, pc_range) %>%
+                       summarize(avg_velo = round(mean(RelSpeed), 1),
+                                 ct = n()) %>%
+                       ungroup() %>%
+                       mutate(pc_range = paste((pc_range - 1) * 5 + 1, pc_range * 5, sep = "-")) 
+                     })
+  })
   
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 # Tab ideas:
-# Game summaries(Add filters for batter handedness, results of the pitch), player profiles(stats for season along with pitch tunneling), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location)
+# Game summaries(Add filters for batter handedness, results of the pitch, also add colors for percentiles of metrics), player profiles(stats for season along with pitch tunneling), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location), 
 ```
 
