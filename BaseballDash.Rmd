@@ -327,8 +327,7 @@ server = function(input, output) {
                          geom_line(aes(group = 1)) +
                          theme_bw() + 
                          theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
-                         labs(title = paste(sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash), 
-                                               "Average Velo by pitch count"), 
+                         labs(title = paste(input$Dash, "Average Velo by pitch count"), 
                               x = "Opponent", y = "Fastball Velo")
                        })
       })
