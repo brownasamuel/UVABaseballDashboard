@@ -16,11 +16,11 @@ library(pdftools)
 library(janitor)
 
 # Read in data
-allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv")
+allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 Season Data.csv") %>%
+  mutate(opponent = paste(BatterTeam, sub("/2023", "", Date)))
 
 virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
-  mutate(opponent = paste(BatterTeam, sub("/2023", "", Date))) %>%
   select(-c(50:167))
 
 # Get a player's picture
@@ -128,11 +128,16 @@ ui <- fluidPage(
                                 imageOutput("pic_CE")),
                          column(9,
                                 div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
-                       # Put in options for what to look at(For now just do stamina)
-                       tabsetPanel(tabPanel(title = "Durability", value = "durab",
+                       # Put in options for what to look at
+                       tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
                                             fluidRow(column(6, plotOutput("pc_graph_CE")),
                                                      column(6, 
                                                             div(dataTableOutput("pc_table_CE"), 
+                                                                style = "font-size: 80%")))),
+                                   tabPanel(title = "Game-to-game Performance",
+                                            fluidRow(column(6, plotOutput("gtg_graph_CE")),
+                                                     column(6, 
+                                                            div(dataTableOutput("gtg_table_CE"), 
                                                                 style = "font-size: 80%"))))
                                    )
                        ),
@@ -146,6 +151,11 @@ ui <- fluidPage(
                                             fluidRow(column(6, plotOutput("pc_graph_KJ")),
                                                      column(6, 
                                                             div(dataTableOutput("pc_table_KJ"), 
+                                                                style = "font-size: 80%")))),
+                                   tabPanel(title = "Game-to-game Performance",
+                                            fluidRow(column(6, plotOutput("gtg_graph_KJ")),
+                                                     column(6, 
+                                                            div(dataTableOutput("gtg_table_KJ"), 
                                                                 style = "font-size: 80%"))))
                                    )
                        )
@@ -247,7 +257,7 @@ server = function(input, output) {
   observe({
     output[[paste0("pc_graph_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
-                     allPitches %>%
+                     allGames %>%
                        mutate(ct = 1) %>%
                        group_by(Pitcher, Date) %>%
                        mutate(pc = cumsum(ct)) %>%
@@ -257,26 +267,28 @@ server = function(input, output) {
                                               seq(0, 200, 5),
                                               labels = FALSE)) %>%
                        filter(TaggedPitchType == "Fastball", 
-                              Pitcher == gsub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                              Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, pc_range) %>%
-                       summarize(avg_velo = mean(RelSpeed),
-                                 ct = n()) %>%
+                       summarize(avg_velo = mean(RelSpeed, na.rm = TRUE),
+                                 ct = n(), 
+                                 .groups = "keep") %>%
                        ungroup() %>%
                        mutate(pc_range2 = paste((pc_range - 1) * 5 + 1, pc_range * 5, sep = "-"),
                               pc_range2 = factor(pc_range2, levels = pc_range2)) %>%
-                       ggplot(aes(x = pc_range2, y = avg_velo)) +
+                       ggplot(aes(x = pc_range2, y = avg_velo, group = 1)) +
                        geom_point() +
+                       geom_line() +
                        theme_bw() +
                        labs(title = paste(input$Dash, "Average Velo by pitch count"), 
                             x = "Pitch Count", y = "Fastball Velo") +
-                       theme(axis.text.x = element_text(size = 11))
+                       theme(axis.text.x = element_text(size = 11))  
                      })
   })
   # Pitch count velo table
   observe({
     output[[paste0("pc_table_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
-                     allPitches %>%
+                     allGames %>%
                        mutate(ct = 1) %>%
                        group_by(Pitcher, Date) %>%
                        mutate(pc = cumsum(ct)) %>%
@@ -286,14 +298,54 @@ server = function(input, output) {
                                               seq(0, 200, 5),
                                               labels = FALSE)) %>%
                        filter(TaggedPitchType == "Fastball", 
-                              Pitcher == gsub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                              Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, pc_range) %>%
                        summarize(avg_velo = round(mean(RelSpeed), 1),
-                                 ct = n()) %>%
+                                 n = n(), 
+                                 .groups = "keep") %>%
                        ungroup() %>%
-                       mutate(pc_range = paste((pc_range - 1) * 5 + 1, pc_range * 5, sep = "-")) 
+                       mutate(pc_range = paste((pc_range - 1) * 5 + 1, pc_range * 5, sep = "-")) %>%
+                       rename("Pitch Count Range" = pc_range,
+                              "Average Velo" = avg_velo,
+                              "Number Thrown" = n)
                      })
-  })
+    })
+    # Game-to-game graph
+    observe({
+      output[[paste0("gtg_graph_", 
+                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
+                       allGames %>%
+                         filter(TaggedPitchType == "Fastball", 
+                                Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                         group_by(Pitcher, Date, opponent) %>%
+                         summarize(velo = mean(RelSpeed), 
+                                   .groups = "keep") %>%
+                         ungroup() %>%
+                         mutate(opponent = factor(opponent, levels = opponent)) %>%
+                         ggplot(aes(x = opponent, y = velo)) +
+                         geom_point() +
+                         geom_line(aes(group = 1)) +
+                         theme_bw() + 
+                         theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
+                         labs(title = paste(sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash), 
+                                               "Average Velo by pitch count"), 
+                              x = "Opponent", y = "Fastball Velo")
+                       })
+      })
+    # Game-to-game table
+    observe({
+      output[[paste0("gtg_table_", 
+                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                       allGames %>%
+                         filter(TaggedPitchType == "Fastball", 
+                                 Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                          group_by(Pitcher, Date, opponent) %>%
+                          summarize(velo = round(mean(RelSpeed), 1), 
+                                    .groups = "keep") %>%
+                         rename("Opponent" = opponent,
+                                "Avg Velo" = velo)
+                       })
+      })
   
 }
 
