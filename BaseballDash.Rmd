@@ -148,14 +148,16 @@ ui <- fluidPage(
                                  imageOutput("pic_KJ")),
                           column(9,
                                  div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
-                        tabsetPanel(tabPanel(title = "Durability", value = "durab",
-                                             fluidRow(column(6, plotOutput("pc_graph_KJ")),
-                                                      column(6, 
+                        tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
+                                             fluidRow(column(2, uiOutput("ptypeKJdurab")),
+                                                      column(6, plotOutput("pc_graph_KJ")),
+                                                      column(4, 
                                                              div(dataTableOutput("pc_table_KJ"), 
                                                                  style = "font-size: 80%")))),
                                     tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(6, plotOutput("gtg_graph_KJ")),
-                                                      column(6, 
+                                             fluidRow(column(2, uiOutput("ptypeKJgtg")),
+                                                      column(6, plotOutput("gtg_graph_KJ")),
+                                                      column(4, 
                                                              div(dataTableOutput("gtg_table_KJ"), 
                                                                  style = "font-size: 80%"))))
                                     )
@@ -397,6 +399,7 @@ server = function(input, output) {
                                Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                         group_by(Pitcher, Date, opponent) %>%
                         summarize(velo = round(mean(RelSpeed), 1), 
+                                  "Number thrown" = n(),
                                   .groups = "keep") %>%
                        rename("Opponent" = opponent,
                               "Avg Velo" = velo)
