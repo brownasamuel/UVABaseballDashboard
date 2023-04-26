@@ -60,7 +60,7 @@ find_stats <- function(name){
 }
 ```
 
-```{r, echo = FALSE}
+```{r ui and server, echo = FALSE}
 ui <- fluidPage(
   titlePanel("UVA Baseball Pitching Dashboard"),
   tags$head(
@@ -139,7 +139,7 @@ ui <- fluidPage(
                                                              div(dataTableOutput("pc_table_CE"), 
                                                                  style = "font-size: 80%")))),
                                     tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(2, uiOutput("ptypeCEgtg")),
+                                             fluidRow(column(2, uiOutput("ptypeCEgtg"), uiOutput("metricCEgtg")),
                                                       column(6, plotOutput("gtg_graph_CE")),
                                                       column(4, 
                                                              div(dataTableOutput("gtg_table_CE"), 
@@ -395,8 +395,18 @@ server = function(input, output) {
                        choices = c(virginia %>% 
                                      filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
                                      pull(TaggedPitchType) %>% 
-                                     unique()), 
-                       options = list('actions-box' = TRUE))
+                                     unique()))
+        })
+    })
+  # Select metric
+  observe({
+    output[[
+      paste0("metric", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gtg")]] <- renderUI({
+        selectizeInput(paste0("metric", 
+                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                              "gtg"), 
+                       "Metric", 
+                       choices = c("Velocity", "Spin Rate", "Usage"))
         })
     })
   # Game-to-game graph
@@ -451,6 +461,6 @@ server = function(input, output) {
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 # Tab ideas:
-# Game summaries(Add filters for batter handedness, results of the pitch, also add colors for percentiles of metrics), player profiles(stats for season along with pitch tunneling), pitcher comps, season long stats(velo and spin throughout year along with stats), thresholds(pitches above speed or above a certain location), 
+# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), 
 ```
 
