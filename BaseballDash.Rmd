@@ -135,8 +135,9 @@ ui <- fluidPage(
                                                              div(dataTableOutput("pc_table_CE"), 
                                                                  style = "font-size: 80%")))),
                                     tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(6, plotOutput("gtg_graph_CE")),
-                                                      column(6, 
+                                             fluidRow(column(2, uiOutput("ptypeCEgtg")),
+                                                      column(6, plotOutput("gtg_graph_CE")),
+                                                      column(4, 
                                                              div(dataTableOutput("gtg_table_CE"), 
                                                                  style = "font-size: 80%"))))
                                     )
@@ -253,15 +254,21 @@ server = function(input, output) {
   })
   ##########################
   ### Inner tab 1- Durability
-  output$ptypeCEdurab <- renderUI({
-    selectizeInput("ptypeCEdurab", "Pitch type", 
-                choices = c(virginia %>% 
-                              filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
-                              pull(TaggedPitchType) %>% 
-                              unique()),
-                options = list('actions-box' = TRUE))
-  })
-  
+  # Select pitch type
+  observe({
+    output[[
+      paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "durab")]] <- renderUI({
+        selectizeInput(paste0("ptype", 
+                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                              "durab"), 
+                       "Pitch type", 
+                       choices = c(virginia %>% 
+                                     filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                     pull(TaggedPitchType) %>% 
+                                     unique()), 
+                       options = list('actions-box' = TRUE))
+        })
+    })
   # Pitch count velo graph
   observe({
     output[[paste0("pc_graph_", 
@@ -299,7 +306,7 @@ server = function(input, output) {
                             y = paste(input[[paste0("ptype", 
                                                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                            collapse = ""), "durab")]], 
-                                      "Velo")) +
+                                      "Velo(mph)")) +
                        theme(axis.text.x = element_text(size = 11))  
                      })
   })
@@ -331,42 +338,70 @@ server = function(input, output) {
                               "Number Thrown" = n)
                      })
     })
-    # Game-to-game graph
-    observe({
-      output[[paste0("gtg_graph_", 
-                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
-                       allGames %>%
-                         filter(TaggedPitchType == "Fastball", 
-                                Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                         group_by(Pitcher, Date, opponent) %>%
-                         summarize(velo = mean(RelSpeed), 
-                                   .groups = "keep") %>%
-                         ungroup() %>%
-                         mutate(opponent = factor(opponent, levels = opponent)) %>%
-                         ggplot(aes(x = opponent, y = velo)) +
-                         geom_point() +
-                         geom_line(aes(group = 1)) +
-                         theme_bw() + 
-                         theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
-                         labs(title = paste(input$Dash, "Average Velo by Game"), 
-                              x = "Opponent", y = "Fastball Velo")
-                       })
-      })
-    # Game-to-game table
-    observe({
-      output[[paste0("gtg_table_", 
-                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
-                       allGames %>%
-                         filter(TaggedPitchType == "Fastball", 
-                                 Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                          group_by(Pitcher, Date, opponent) %>%
-                          summarize(velo = round(mean(RelSpeed), 1), 
-                                    .groups = "keep") %>%
-                         rename("Opponent" = opponent,
-                                "Avg Velo" = velo)
-                       })
-      })
+  ### Inner tab 2- Game to game
+  # Select pitch type
+  observe({
+    output[[
+      paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gtg")]] <- renderUI({
+        selectizeInput(paste0("ptype", 
+                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                              "gtg"), 
+                       "Pitch type", 
+                       choices = c(virginia %>% 
+                                     filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                     pull(TaggedPitchType) %>% 
+                                     unique()), 
+                       options = list('actions-box' = TRUE))
+        })
+    })
   
+  # Game-to-game graph
+  observe({
+    output[[paste0("gtg_graph_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
+                     allGames %>%
+                       filter(TaggedPitchType == input[[paste0("ptype", 
+                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                      collapse = ""), "gtg")]], 
+                              Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       group_by(Pitcher, Date, opponent) %>%
+                       summarize(velo = mean(RelSpeed), 
+                                 .groups = "keep") %>%
+                       ungroup() %>%
+                       mutate(opponent = factor(opponent, levels = opponent)) %>%
+                       ggplot(aes(x = opponent, y = velo)) +
+                       geom_point() +
+                       geom_line(aes(group = 1)) +
+                       theme_bw() + 
+                       theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
+                       labs(title = paste(input$Dash, "Average", 
+                                          input[[paste0("ptype", 
+                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "gtg")]], 
+                                          "Velo by Game"), 
+                            x = "Opponent", 
+                            y = paste(input[[paste0("ptype", 
+                                                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                           collapse = ""), "gtg")]], 
+                                      "Velo(mph)"))
+                     })
+    })
+  # Game-to-game table
+  observe({
+    output[[paste0("gtg_table_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                     allGames %>%
+                       filter(TaggedPitchType == input[[paste0("ptype", 
+                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                      collapse = ""), "gtg")]], 
+                               Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                        group_by(Pitcher, Date, opponent) %>%
+                        summarize(velo = round(mean(RelSpeed), 1), 
+                                  .groups = "keep") %>%
+                       rename("Opponent" = opponent,
+                              "Avg Velo" = velo)
+                     })
+    })
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
