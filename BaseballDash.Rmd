@@ -356,7 +356,6 @@ server = function(input, output) {
                        options = list('actions-box' = TRUE))
         })
     })
-  
   # Game-to-game graph
   observe({
     output[[paste0("gtg_graph_", 
