@@ -102,16 +102,20 @@ ui <- fluidPage(
                          
                          uiOutput("Opponent"),
                          
-                         uiOutput("PType1")),
+                         uiOutput("PType1"),
+                         
+                         uiOutput("bHand"),
+                         
+                         uiOutput("Outcome")),
                
                mainPanel(width = 8,
-                         conditionalPanel("input.PitchType1 != ''",
+                         conditionalPanel("input.PitchType1 != '' & input.bhand != '' & input.outcome != ''",
                                 div(plotOutput("pitchZone")))
                          )),
              
              fluidRow(
                column(12,
-                      conditionalPanel("input.PitchType1 != ''",
+                      conditionalPanel("input.PitchType1 != '' & input.bhand != '' & input.outcome != ''",
                                        div(DT::dataTableOutput("mytable"), style = "font-size: 70%; width: 100%"))
                       )
                )
@@ -192,22 +196,60 @@ server = function(input, output) {
                                  options = list('actions-box' = TRUE),
                                  multiple = TRUE))
   })
+  # Select batter handedness bar
+  output$bHand <- renderUI({
+    conditionalPanel("input.PitchType1 != '' ",
+                     pickerInput("bhand", "Batter handedness", 
+                                 choices = c("Right", "Left"), 
+                                 selected = c("Right", "Left"),
+                                 options = list('actions-box' = TRUE),
+                                 multiple = TRUE))
+  })
+  # Select outcome bar
+  output$Outcome <- renderUI({
+    conditionalPanel("input.PitchType1 != '' ",
+                     pickerInput("outcome", "Outcome", 
+                                 choices = virginia %>% 
+                                   filter(Pitcher %in% input$pitcher,
+                                          opponent %in% input$opponent,
+                                          TaggedPitchType %in% input$PitchType1) %>% 
+                                   mutate(PitchCall = case_when(
+                                     PitchCall == "InPlay" ~ PlayResult,
+                                     PitchCall != "InPlay" ~ PitchCall)) %>%
+                                   pull(PitchCall) %>% 
+                                   unique(), 
+                                 selected = virginia %>% 
+                                   filter(Pitcher %in% input$pitcher,
+                                          opponent %in% input$opponent,
+                                          TaggedPitchType %in% input$PitchType1) %>% 
+                                   mutate(PitchCall = case_when(
+                                     PitchCall == "InPlay" ~ PlayResult,
+                                     PitchCall != "InPlay" ~ PitchCall)) %>%
+                                   pull(PitchCall) %>% 
+                                   unique(),
+                                 options = list('actions-box' = TRUE),
+                                 multiple = TRUE))
+  })
   # Zone plot of pitches
   output$pitchZone <- renderPlot(
     virginia %>%
+      mutate(PitchCall = case_when(
+        PitchCall == "InPlay" ~ PlayResult,
+        PitchCall != "InPlay" ~ PitchCall)) %>%
       filter(PitchCall != "",
              Pitcher %in% input$pitcher,
              opponent %in% input$opponent,
-             TaggedPitchType %in% input$PitchType1) %>%
+             TaggedPitchType %in% input$PitchType1,
+             PitchCall %in% input$outcome,
+             BatterSide %in% input$bhand) %>%
       ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
-      geom_point(aes(color = RelSpeed), na.rm = TRUE) +
+      geom_point(aes(color = PitchCall), na.rm = TRUE) +
       xlim(-2.5, 2.5) +
       theme_bw() +
-      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Velocity") +
+      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Outcome") +
       geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
                                   y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
                 aes(x = x, y = y)) +
-      scale_color_gradient(low = "#181C90", high = "#F78707") +
       facet_grid(. ~ TaggedPitchType) +
       coord_equal()
   )
@@ -216,7 +258,8 @@ server = function(input, output) {
     datatable(virginia %>%
        filter(PitchCall != "",
               Pitcher %in% input$pitcher,
-              opponent %in% input$opponent) %>%
+              opponent %in% input$opponent,
+              BatterSide %in% input$bhand) %>%
        group_by(Pitcher, TaggedPitchType) %>%
        summarize('Sitting Velo' = paste(round(quantile(RelSpeed, .25), 1), 
                                         "-",
