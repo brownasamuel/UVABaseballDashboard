@@ -118,49 +118,49 @@ ui <- fluidPage(
              
              
              ),
-    
     ### Tab 2- Player profiles(Should I add in a header to each?)
-   navbarMenu(title = "Player Profiles",
-              # Put in sub tabs for each player
-              tabPanel(title = "Connelly Early", value = "Connelly Early",
-                       fluidRow(
-                         column(2,
-                                imageOutput("pic_CE")),
-                         column(9,
-                                div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
-                       # Put in options for what to look at
-                       tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
-                                            fluidRow(column(6, plotOutput("pc_graph_CE")),
-                                                     column(6, 
-                                                            div(dataTableOutput("pc_table_CE"), 
-                                                                style = "font-size: 80%")))),
-                                   tabPanel(title = "Game-to-game Performance",
-                                            fluidRow(column(6, plotOutput("gtg_graph_CE")),
-                                                     column(6, 
-                                                            div(dataTableOutput("gtg_table_CE"), 
-                                                                style = "font-size: 80%"))))
-                                   )
-                       ),
-              tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
-                       fluidRow(
-                         column(2,
-                                imageOutput("pic_KJ")),
-                         column(9,
-                                div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
-                       tabsetPanel(tabPanel(title = "Durability", value = "durab",
-                                            fluidRow(column(6, plotOutput("pc_graph_KJ")),
-                                                     column(6, 
-                                                            div(dataTableOutput("pc_table_KJ"), 
-                                                                style = "font-size: 80%")))),
-                                   tabPanel(title = "Game-to-game Performance",
-                                            fluidRow(column(6, plotOutput("gtg_graph_KJ")),
-                                                     column(6, 
-                                                            div(dataTableOutput("gtg_table_KJ"), 
-                                                                style = "font-size: 80%"))))
-                                   )
-                       )
-              )
-   )
+    navbarMenu(title = "Player Profiles",
+               # Put in sub tabs for each player
+               tabPanel(title = "Connelly Early", value = "Connelly Early",
+                        fluidRow(
+                          column(2,
+                                 imageOutput("pic_CE")),
+                          column(9,
+                                 div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
+                        # Put in options for what to look at
+                        tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
+                                             fluidRow(column(2, uiOutput("ptypeCEdurab")),
+                                                      column(6, plotOutput("pc_graph_CE")),
+                                                      column(4, 
+                                                             div(dataTableOutput("pc_table_CE"), 
+                                                                 style = "font-size: 80%")))),
+                                    tabPanel(title = "Game-to-game Performance",
+                                             fluidRow(column(6, plotOutput("gtg_graph_CE")),
+                                                      column(6, 
+                                                             div(dataTableOutput("gtg_table_CE"), 
+                                                                 style = "font-size: 80%"))))
+                                    )
+                        ),
+               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
+                        fluidRow(
+                          column(2,
+                                 imageOutput("pic_KJ")),
+                          column(9,
+                                 div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
+                        tabsetPanel(tabPanel(title = "Durability", value = "durab",
+                                             fluidRow(column(6, plotOutput("pc_graph_KJ")),
+                                                      column(6, 
+                                                             div(dataTableOutput("pc_table_KJ"), 
+                                                                 style = "font-size: 80%")))),
+                                    tabPanel(title = "Game-to-game Performance",
+                                             fluidRow(column(6, plotOutput("gtg_graph_KJ")),
+                                                      column(6, 
+                                                             div(dataTableOutput("gtg_table_KJ"), 
+                                                                 style = "font-size: 80%"))))
+                                    )
+                        )
+               )
+    )
   )
 
 server = function(input, output) {
@@ -253,6 +253,15 @@ server = function(input, output) {
   })
   ##########################
   ### Inner tab 1- Durability
+  output$ptypeCEdurab <- renderUI({
+    selectizeInput("ptypeCEdurab", "Pitch type", 
+                choices = c(virginia %>% 
+                              filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                              pull(TaggedPitchType) %>% 
+                              unique()),
+                options = list('actions-box' = TRUE))
+  })
+  
   # Pitch count velo graph
   observe({
     output[[paste0("pc_graph_", 
@@ -266,7 +275,9 @@ server = function(input, output) {
                               pc_range = cut(pc,
                                               seq(0, 200, 5),
                                               labels = FALSE)) %>%
-                       filter(TaggedPitchType == "Fastball", 
+                       filter(TaggedPitchType == input[[paste0("ptype", 
+                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                      collapse = ""), "durab")]], 
                               Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, pc_range) %>%
                        summarize(avg_velo = mean(RelSpeed, na.rm = TRUE),
@@ -279,8 +290,16 @@ server = function(input, output) {
                        geom_point() +
                        geom_line() +
                        theme_bw() +
-                       labs(title = paste(input$Dash, "Average Velo by pitch count"), 
-                            x = "Pitch Count", y = "Fastball Velo") +
+                       labs(title = paste(input$Dash, "Average", 
+                                          input[[paste0("ptype", 
+                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "durab")]], 
+                                          "Velo by pitch count"), 
+                            x = "Pitch Count", 
+                            y = paste(input[[paste0("ptype", 
+                                                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                           collapse = ""), "durab")]], 
+                                      "Velo")) +
                        theme(axis.text.x = element_text(size = 11))  
                      })
   })
@@ -297,7 +316,9 @@ server = function(input, output) {
                               pc_range = cut(pc,
                                               seq(0, 200, 5),
                                               labels = FALSE)) %>%
-                       filter(TaggedPitchType == "Fastball", 
+                       filter(TaggedPitchType == input[[paste0("ptype", 
+                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                      collapse = ""), "durab")]], 
                               Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, pc_range) %>%
                        summarize(avg_velo = round(mean(RelSpeed), 1),
@@ -327,7 +348,7 @@ server = function(input, output) {
                          geom_line(aes(group = 1)) +
                          theme_bw() + 
                          theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
-                         labs(title = paste(input$Dash, "Average Velo by pitch count"), 
+                         labs(title = paste(input$Dash, "Average Velo by Game"), 
                               x = "Opponent", y = "Fastball Velo")
                        })
       })
