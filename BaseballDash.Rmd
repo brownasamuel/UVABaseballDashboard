@@ -406,7 +406,9 @@ server = function(input, output) {
                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
                               "gtg"), 
                        "Metric", 
-                       choices = c("Velocity", "Spin Rate", "Usage"))
+                       choices = c("Velocity" = "Velocity", 
+                                   "Spin Rate" = "SpinRate", 
+                                   "Usage" = "Usage"))
         })
     })
   # Game-to-game graph
@@ -414,16 +416,24 @@ server = function(input, output) {
     output[[paste0("gtg_graph_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
                      allGames %>%
+                       filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       group_by(Pitcher, Date, opponent, TaggedPitchType) %>%
+                       summarize(Velocity = mean(RelSpeed), 
+                                 SpinRate = mean(SpinRate),
+                                 ct = n(),
+                                 .groups = "drop_last") %>%
+                       mutate(Usage = 100*ct/sum(ct)) %>%
+                       ungroup() %>%
                        filter(TaggedPitchType == input[[paste0("ptype", 
                                                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                                      collapse = ""), "gtg")]], 
-                              Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                       group_by(Pitcher, Date, opponent) %>%
-                       summarize(velo = mean(RelSpeed), 
-                                 .groups = "keep") %>%
-                       ungroup() %>%
+                                                                      collapse = ""), "gtg")]]) %>%
+                       arrange(mdy(Date)) %>%
                        mutate(opponent = factor(opponent, levels = opponent)) %>%
-                       ggplot(aes(x = opponent, y = velo)) +
+                       ggplot(aes_string(x = "opponent", 
+                                  y = input[[paste0("metric", 
+                                                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                           collapse = ""), "gtg")]]
+                                  )) +
                        geom_point() +
                        geom_line(aes(group = 1)) +
                        theme_bw() + 
@@ -432,12 +442,17 @@ server = function(input, output) {
                                           input[[paste0("ptype", 
                                                         paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                collapse = ""), "gtg")]], 
-                                          "Velo by Game"), 
+                                          input[[paste0("metric", 
+                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "gtg")]],
+                                          "by Game"), 
                             x = "Opponent", 
                             y = paste(input[[paste0("ptype", 
                                                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                            collapse = ""), "gtg")]], 
-                                      "Velo(mph)"))
+                                      input[[paste0("metric", 
+                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "gtg")]]))
                      })
     })
   # Game-to-game table
@@ -445,16 +460,24 @@ server = function(input, output) {
     output[[paste0("gtg_table_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
                      allGames %>%
+                       filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       group_by(Pitcher, Date, opponent, TaggedPitchType) %>%
+                       summarize(Velocity = mean(RelSpeed) %>% round(1), 
+                                 SpinRate = mean(SpinRate) %>% round(0),
+                                 ct = n(),
+                                 .groups = "drop_last") %>%
+                       mutate(Usage = (100*ct/sum(ct)) %>% round(1)) %>%
+                       ungroup() %>%
                        filter(TaggedPitchType == input[[paste0("ptype", 
                                                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                                      collapse = ""), "gtg")]], 
-                               Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                        group_by(Pitcher, Date, opponent) %>%
-                        summarize(velo = round(mean(RelSpeed), 1), 
-                                  "Number thrown" = n(),
-                                  .groups = "keep") %>%
-                       rename("Opponent" = opponent,
-                              "Avg Velo" = velo)
+                                                                      collapse = ""), "gtg")]]) %>%
+                       arrange(mdy(Date)) %>%
+                       select(opponent, ct, 
+                              input[[paste0("metric", 
+                                            paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                   collapse = ""), "gtg")]]) %>%
+                       rename("Number Thrown" = ct,
+                              "Opponent" = opponent) 
                      })
     })
 }
