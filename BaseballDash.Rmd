@@ -159,7 +159,7 @@ ui <- fluidPage(
                                                              div(dataTableOutput("pc_table_KJ"), 
                                                                  style = "font-size: 80%")))),
                                     tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(2, uiOutput("ptypeKJgtg")),
+                                             fluidRow(column(2, uiOutput("ptypeKJgtg"), uiOutput("metricKJgtg")),
                                                       column(6, plotOutput("gtg_graph_KJ")),
                                                       column(4, 
                                                              div(dataTableOutput("gtg_table_KJ"), 
@@ -418,8 +418,8 @@ server = function(input, output) {
                      allGames %>%
                        filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, Date, opponent, TaggedPitchType) %>%
-                       summarize(Velocity = mean(RelSpeed), 
-                                 SpinRate = mean(SpinRate),
+                       summarize(Velocity = mean(RelSpeed, na.rm = TRUE), 
+                                 SpinRate = mean(SpinRate, na.rm = TRUE),
                                  ct = n(),
                                  .groups = "drop_last") %>%
                        mutate(Usage = 100*ct/sum(ct)) %>%
@@ -462,8 +462,8 @@ server = function(input, output) {
                      allGames %>%
                        filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
                        group_by(Pitcher, Date, opponent, TaggedPitchType) %>%
-                       summarize(Velocity = mean(RelSpeed) %>% round(1), 
-                                 SpinRate = mean(SpinRate) %>% round(0),
+                       summarize(Velocity = mean(RelSpeed, na.rm = TRUE) %>% round(1), 
+                                 SpinRate = mean(SpinRate, na.rm = TRUE) %>% round(0),
                                  ct = n(),
                                  .groups = "drop_last") %>%
                        mutate(Usage = (100*ct/sum(ct)) %>% round(1)) %>%
