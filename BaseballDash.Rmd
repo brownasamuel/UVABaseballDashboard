@@ -143,7 +143,11 @@ ui <- fluidPage(
                                                       column(6, plotOutput("gtg_graph_CE")),
                                                       column(4, 
                                                              div(dataTableOutput("gtg_table_CE"), 
-                                                                 style = "font-size: 80%"))))
+                                                                 style = "font-size: 80%")))),
+                                    tabPanel(title = "Zone Profile",
+                                             fluidRow(column(2, uiOutput("ptypeCEzp"), uiOutput("bhandCEzp")),
+                                                      column(6, plotOutput("zp_plot_CE")),
+                                                      column(4)))
                                     )
                         ),
                tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
@@ -479,6 +483,63 @@ server = function(input, output) {
                        rename("Number Thrown" = ct,
                               "Opponent" = opponent) 
                      })
+  })
+  ### Inner tab 3- Zone profile
+  # Select pitch type
+  observe({
+    output[[
+      paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "zp")]] <- renderUI({
+        selectizeInput(paste0("ptype", 
+                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                              "zp"), 
+                       "Pitch type", 
+                       choices = c(virginia %>% 
+                                     filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                     pull(TaggedPitchType) %>% 
+                                     unique()))
+      })
+  })
+  # Select batter handedness
+  observe({
+    output[[
+      paste0("bhand", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "zp")]] <- renderUI({
+        pickerInput(paste0("bhand", 
+                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                           "zp"), 
+                    "Batter handedness", 
+                    choices = c("Right", "Left"), 
+                    selected = c("Right", "Left"),
+                    options = list('actions-box' = TRUE),
+                    multiple = TRUE)
+      })
+  })
+  # Zone plot
+  observe({
+    output[[paste0("zp_plot_", 
+                   paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
+                     virginia %>%
+                       filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                              TaggedPitchType == input[[paste0("ptype", 
+                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                      collapse = ""), "zp")]],
+                              BatterSide %in% input[[paste0("bhand", 
+                                                          paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                 collapse = ""), "zp")]]) %>%
+                       ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+                       stat_density_2d(aes(fill = stat(density)), geom = "raster", contour = FALSE) +
+                       xlim(-1.5, 1.5) +
+                       ylim(1, 4) +
+                       geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
+                                                   y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+                                 aes(x = x, y = y), color = "red") +
+                       scale_fill_gradient(low = '#232D4B', high = '#E57200') +
+                       labs(x = "Pitch Location(Pitcher POV)", y = "Pitch Height") +
+                       theme_minimal() +
+                       theme(panel.grid.major = element_blank(), 
+                             panel.grid.minor = element_blank(),
+                             axis.text = element_blank())
+                     })
+    
     })
 }
 
