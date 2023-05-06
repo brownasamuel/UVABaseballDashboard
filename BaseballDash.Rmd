@@ -167,7 +167,11 @@ ui <- fluidPage(
                                                       column(6, plotOutput("gtg_graph_KJ")),
                                                       column(4, 
                                                              div(dataTableOutput("gtg_table_KJ"), 
-                                                                 style = "font-size: 80%"))))
+                                                                 style = "font-size: 80%")))),
+                                    tabPanel(title = "Zone Profile",
+                                             fluidRow(column(2, uiOutput("ptypeKJzp"), uiOutput("bhandKJzp")),
+                                                      column(6, plotOutput("zp_plot_KJ")),
+                                                      column(4)))
                                     )
                         )
                )
