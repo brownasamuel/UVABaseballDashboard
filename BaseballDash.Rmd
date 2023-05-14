@@ -242,6 +242,8 @@ server = function(input, output) {
   output$pitchZone <- renderPlot(
     virginia %>%
       mutate(PitchCall = case_when(
+        PlayResult == "Single" | PlayResult == "Double" | PlayResult == "Triple" ~ "Hit",
+        PlayResult == "Out" | PlayResult == "FieldersChoice" | PlayResult == "Error" ~ "Out",
         PitchCall == "InPlay" ~ PlayResult,
         PitchCall != "InPlay" ~ PitchCall)) %>%
       filter(PitchCall != "",
