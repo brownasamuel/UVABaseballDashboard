@@ -89,6 +89,7 @@ ui <- fluidPage(
       )
     )
   ),
+  
   navbarPage(
     title = " ", id = "Dash",
     ### Tab 1- Game Summaries
@@ -99,14 +100,14 @@ ui <- fluidPage(
                                            choices = unique(virginia$Pitcher), 
                                            options = list(placeholder = 'Please select an option below',
                                                           onInitialize = I('function() { this.setValue(""); }'))),
+                            
+                            uiOutput("Opponent"),
                          
-                         uiOutput("Opponent"),
+                            uiOutput("PType1"),
                          
-                         uiOutput("PType1"),
+                            uiOutput("bHand"),
                          
-                         uiOutput("bHand"),
-                         
-                         uiOutput("Outcome")),
+                            uiOutput("Outcome")),
                
                mainPanel(width = 8,
                          conditionalPanel("input.PitchType1 != '' & input.bhand != '' & input.outcome != ''",
@@ -123,7 +124,7 @@ ui <- fluidPage(
              
              ),
     ### Tab 2- Player profiles(Should I add in a header to each?)
-    navbarMenu(title = "Player Profiles",
+    navbarMenu(title = "Pitcher Profiles",
                # Put in sub tabs for each player
                tabPanel(title = "Connelly Early", value = "Connelly Early",
                         fluidRow(
@@ -239,56 +240,68 @@ server = function(input, output) {
                                  multiple = TRUE))
   })
   # Zone plot of pitches
-  output$pitchZone <- renderPlot(
-    virginia %>%
-      mutate(PitchCall = case_when(
-        PlayResult == "Single" | PlayResult == "Double" | PlayResult == "Triple" ~ "Hit",
-        PlayResult == "Out" | PlayResult == "FieldersChoice" | PlayResult == "Error" ~ "Out",
-        PitchCall == "InPlay" ~ PlayResult,
-        PitchCall != "InPlay" ~ PitchCall)) %>%
-      filter(PitchCall != "",
-             Pitcher %in% input$pitcher,
-             opponent %in% input$opponent,
-             TaggedPitchType %in% input$PitchType1,
-             PitchCall %in% input$outcome,
-             BatterSide %in% input$bhand) %>%
-      ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
-      geom_point(aes(color = PitchCall), na.rm = TRUE) +
-      xlim(-2.5, 2.5) +
-      theme_bw() +
-      labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Outcome") +
-      geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
-                                  y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
-                aes(x = x, y = y)) +
-      facet_grid(. ~ TaggedPitchType) +
-      coord_equal()
-  )
+  output$pitchZone <- renderPlot({
+    if(is.null(input$PitchType1)){
+      return(NULL)
+    }
+    
+    else {
+      virginia %>%
+        mutate(PitchCall = case_when(
+          PlayResult == "Single" | PlayResult == "Double" | PlayResult == "Triple" ~ "Hit",
+          PlayResult == "Out" | PlayResult == "FieldersChoice" | PlayResult == "Error" ~ "Out",
+          PitchCall == "InPlay" ~ PlayResult,
+          PitchCall != "InPlay" ~ PitchCall)) %>%
+        filter(PitchCall != "",
+               Pitcher %in% input$pitcher,
+               opponent %in% input$opponent,
+               TaggedPitchType %in% input$PitchType1,
+               PitchCall %in% input$outcome,
+               BatterSide %in% input$bhand) %>%
+        ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+        geom_point(aes(color = PitchCall), na.rm = TRUE) +
+        xlim(-2.5, 2.5) +
+        theme_bw() +
+        labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Outcome") +
+        geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
+                                    y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+                  aes(x = x, y = y)) +
+        facet_grid(. ~ TaggedPitchType) +
+        coord_equal()
+    }
+  })
   # Pitch results table
   output$mytable <- DT::renderDataTable({
-    datatable(virginia %>%
-       filter(PitchCall != "",
-              Pitcher %in% input$pitcher,
-              opponent %in% input$opponent,
-              BatterSide %in% input$bhand) %>%
-       group_by(Pitcher, TaggedPitchType) %>%
-       summarize('Sitting Velo' = paste(round(quantile(RelSpeed, .25), 1), 
-                                        "-",
-                                        round(quantile(RelSpeed, .75), 1)),
-                 'Max Velo' = round(max(RelSpeed), 1),
-                 'Total Pitches' = n(),
-                 Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
-                 Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
-                 Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
-                 Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
-                 SwStr = sum(PitchCall == "StrikeSwinging"),
-                 WhiffPerc = 100*round(SwStr/Swings, 3),
-                 HR = sum(PlayResult == "HomeRun"),
-                 BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
-                   sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
-                         (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
-                 .groups = "keep") %>%
-       rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
-       options = list(scrollX = T))
+    if(is.null(input$PitchType1)){
+      return(NULL)
+    }
+    
+    else {
+      datatable(virginia %>%
+         filter(PitchCall != "",
+                Pitcher %in% input$pitcher,
+                opponent %in% input$opponent,
+                BatterSide %in% input$bhand) %>%
+         group_by(Pitcher, TaggedPitchType) %>%
+         summarize('Sitting Velo' = paste(round(quantile(RelSpeed, .25), 1), 
+                                          "-",
+                                          round(quantile(RelSpeed, .75), 1)),
+                   'Max Velo' = round(max(RelSpeed), 1),
+                   'Total Pitches' = n(),
+                   Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
+                   Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
+                   Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                   Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
+                   SwStr = sum(PitchCall == "StrikeSwinging"),
+                   WhiffPerc = 100*round(SwStr/Swings, 3),
+                   HR = sum(PlayResult == "HomeRun"),
+                   BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                     sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                           (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                   .groups = "keep") %>%
+         rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
+         options = list(scrollX = T))
+    }
   })
   
   ################################################################################################################
@@ -523,7 +536,7 @@ server = function(input, output) {
   observe({
     output[[paste0("zp_plot_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
-                     virginia %>%
+                     locs <- virginia %>%
                        filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
                               TaggedPitchType == input[[paste0("ptype", 
                                                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
@@ -531,26 +544,35 @@ server = function(input, output) {
                               BatterSide %in% input[[paste0("bhand", 
                                                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                  collapse = ""), "zp")]]) %>%
-                       ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
-                       stat_density_2d(aes(fill = stat(density)), geom = "raster", contour = FALSE) +
-                       xlim(-1.5, 1.5) +
-                       ylim(1, 4) +
-                       geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
-                                                   y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
-                                 aes(x = x, y = y), color = "red") +
-                       scale_fill_gradient(low = '#232D4B', high = '#E57200') +
-                       labs(x = "Pitch Location(Pitcher POV)", y = "Pitch Height") +
-                       theme_minimal() +
-                       theme(panel.grid.major = element_blank(), 
-                             panel.grid.minor = element_blank(),
-                             axis.text = element_blank())
-                     })
+                       mutate(x2 = (1.6/5)*floor((PlateLocSide)/(1.6/5)),
+                              y2 = 1.79 + (1.9/5)*floor((PlateLocHeight - 1.79)/(1.9/5))
+                              ) %>%
+                       group_by(x2, y2) %>%
+                       summarize(ct = n(), .groups = "drop") %>%
+                       mutate(perc = 100*ct/sum(ct))
+                       
+                       locs %>%
+                         ggplot(aes(x = x2, y = y2)) +
+                         geom_tile(aes(fill = perc)) +
+                         xlim(-2.5, 2.5) +
+                         ylim(0, 5) +
+                         geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
+                                                     y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+                                   aes(x = x, y = y), color = "red") +
+                         scale_fill_gradient(low = '#232D4B', high = '#E57200', 
+                                             limits = c(0, max(locs$perc)), name = "Percentage of Pitches") +
+                         theme_bw() + 
+                         theme(panel.background = element_rect(fill = '#232D4B', color = '#232D4B'),
+                               panel.grid.major = element_blank(), 
+                               panel.grid.minor = element_blank()) + 
+                         labs(x = "Pitch Location(Pitcher POV)", y = "Pitch Height") 
+                       })
     
     })
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 # Tab ideas:
-# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), 
+# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), add in hitters eventually
 ```
 
