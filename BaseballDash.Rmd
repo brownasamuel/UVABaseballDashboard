@@ -193,10 +193,10 @@ ui <- fluidPage(
                                              # Add in batter handedness that applies to both
                                              fluidRow(p(""),
                                                       div(dataTableOutput("tab_moveout_KJ"), 
-                                                          style = "font-size:95%")),
+                                                          style = "font-size:90%")),
                                              fluidRow(p("Usage Table"),
                                                       div(dataTableOutput("tab_usage_KJ"), 
-                                                          style = "font-size:75%"))),
+                                                          style = "font-size:90%"))),
                                     tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeKJdurab")),
                                                       column(6, plotOutput("pc_graph_KJ")),
@@ -618,7 +618,7 @@ server = function(input, output) {
                                      "Velocity",
                                      "Horizontal Release Point",
                                      "Vertical Release Point"),
-                         selected = "Horizontal Movement")
+                         selected = "Horizontal Release Point")
         })
       })
     
@@ -637,7 +637,7 @@ server = function(input, output) {
                                      "Velocity",
                                      "Horizontal Release Point",
                                      "Vertical Release Point"),
-                         selected = "Velocity")
+                         selected = "Vertical Release Point")
           })
       })
     
@@ -656,7 +656,7 @@ server = function(input, output) {
                    "Spin Axis" = SpinAxis,
                    "Horizontal Release Point" = RelSide,
                    "Vertical Release Point" = RelHeight) %>%
-            filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", "Connelly Early")) %>%
+            filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
             ggplot(aes(x = !!sym(input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                collapse = ""), "sp")]]), 
                        y = !!sym(input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
@@ -667,28 +667,31 @@ server = function(input, output) {
         })
       })
     
-    # Make pitch profile table
+    # Make corresponding table
     observe({
       output[[paste0("sp_table_", 
                      paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
-                       allGames %>%
-                         filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                         drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate) %>%
-                         group_by(TaggedPitchType) %>%
-                         summarize(Velocity = round(mean(RelSpeed, na.rm = T), 1),
-                                   "Spin Rate" = round(mean(SpinRate, na.rm = T), 1),
-                                   "Spin Axis" = round(mean(SpinAxis, na.rm = T), 1),
-                                   "Horizontal Movement" = round(mean(HorzBreak, na.rm = T), 1),
-                                   "Vertical Movement" = round(mean(InducedVertBreak, na.rm = T), 1),
-                                   "Horizontal Release Point" = round(mean(RelSide, na.rm = T), 1),
-                                   "Vertical Release Pint" = round(mean(RelHeight, na.rm = T), 1)) %>%
-                         select(TaggedPitchType, 
-                                input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                              collapse = ""), "sp")]],
-                                input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                              collapse = ""), "sp")]]) %>%
-                         rename("Pitch Type" = TaggedPitchType)
-                       
+                       if(is.null(input$Dash)){
+                         return(NULL)}
+                       else{
+                         allGames %>%
+                           filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                           drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate) %>%
+                           group_by(TaggedPitchType) %>%
+                           summarize(Velocity = round(mean(RelSpeed, na.rm = T), 1),
+                                     "Spin Rate" = round(mean(SpinRate, na.rm = T), 1),
+                                     "Spin Axis" = round(mean(SpinAxis, na.rm = T), 1),
+                                     "Horizontal Movement" = round(mean(HorzBreak, na.rm = T), 1),
+                                     "Vertical Movement" = round(mean(InducedVertBreak, na.rm = T), 1),
+                                     "Horizontal Release Point" = round(mean(RelSide, na.rm = T), 1),
+                                     "Vertical Release Point" = round(mean(RelHeight, na.rm = T), 1)) %>%
+                           select(TaggedPitchType, 
+                                  input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                collapse = ""), "sp")]],
+                                  input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                                collapse = ""), "sp")]]) %>%
+                           rename("Pitch Type" = TaggedPitchType)
+                         }
                        })
       })
     ### Inner tab 5- Tables
@@ -696,44 +699,40 @@ server = function(input, output) {
     observe({
       output[[paste0("tab_moveout_", 
                      paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
-                       if(is.null(input$Dash)){
-                         return(NULL)}
-                       else {
-                         allGames %>%
-                           filter(PitchCall != "",
-                           TaggedPitchType != "",
-                           Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
-                           group_by(Pitcher, TaggedPitchType) %>%
-                           summarize(Count = n(),
-                           Velo = paste(round(quantile(RelSpeed, .25), 1), 
-                                        "-", round(quantile(RelSpeed, .75), 1)),
-                           'Vertical Break' = round(mean(InducedVertBreak), 2),
-                           'Horizontal Break' = round(mean(HorzBreak), 2),
-                           'Vertical Release' = round(mean(RelHeight), 2),
-                           'Horizontal Release' = round(mean(RelSide), 2),
-                           Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall")),
-                           'Strike %' = 100*round(Strikes/Count, 3),
-                           Balls = sum(PitchCall %in% c("BallCalled", "BallinDirt", "BallIntentional")),
-                           'Strike %' = 100*round(Balls/Count, 3),
-                           Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
-                           'Swing %' = 100*round(Swings/Count, 3),
-                           Fouls = sum(PitchCall == 'FoulBall'),
-                            'Foul %' = 100*round(Fouls/Count, 3),
-                           SwStr = sum(PitchCall == "StrikeSwinging"),
-                           'Whiff %' = 100*round(SwStr/Swings, 3),
-                           'BIP %' = (100*sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
-                                                                "Error", "FieldersChoice") | 
-                                                (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))/Count) %>% round(1),
-                           HR = sum(PlayResult == "HomeRun"),
-                           BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
-                             sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
-                                   (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
-                           .groups = "drop") %>%
-                           mutate(Usage = (100*Count/sum(Count)) %>% round(1)) %>%
-                           relocate(Usage, .after = Count) %>%
-                           rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, "Percentage Thrown" = Usage) %>%
-                           select(-c(Strikes, Balls, Swings, Fouls, SwStr))
-                         }
+                       allGames %>%
+                         filter(PitchCall != "",
+                         TaggedPitchType != "",
+                         Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                         group_by(Pitcher, TaggedPitchType) %>%
+                         summarize(Count = n(),
+                         Velo = paste(round(quantile(RelSpeed, .25), 1), 
+                                      "-", round(quantile(RelSpeed, .75), 1)),
+                         'Vertical Break' = round(mean(InducedVertBreak), 2),
+                         'Horizontal Break' = round(mean(HorzBreak), 2),
+                         'Vertical Release' = round(mean(RelHeight, na.rm = T), 2),
+                         'Horizontal Release' = round(mean(RelSide, na.rm = T), 2),
+                         Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall")),
+                         'Strike %' = 100*round(Strikes/Count, 3),
+                         Balls = sum(PitchCall %in% c("BallCalled", "BallinDirt", "BallIntentional")),
+                         'Strike %' = 100*round(Balls/Count, 3),
+                         Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                         'Swing %' = 100*round(Swings/Count, 3),
+                         Fouls = sum(PitchCall == 'FoulBall'),
+                          'Foul %' = 100*round(Fouls/Count, 3),
+                         SwStr = sum(PitchCall == "StrikeSwinging"),
+                         'Whiff %' = 100*round(SwStr/Swings, 3),
+                         'BIP %' = (100*sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
+                                                              "Error", "FieldersChoice") | 
+                                              (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))/Count) %>% round(1),
+                         HR = sum(PlayResult == "HomeRun"),
+                         BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                           sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                                 (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                         .groups = "drop") %>%
+                         mutate(Usage = (100*Count/sum(Count)) %>% round(1)) %>%
+                         relocate(Usage, .after = Count) %>%
+                         rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, "Percentage Thrown" = Usage) %>%
+                         select(-c(Strikes, Balls, Swings, Fouls, SwStr))
                        })
       })
     # Usage table
