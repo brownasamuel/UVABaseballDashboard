@@ -56,7 +56,11 @@ pit_stats <- str_split(raw_text, "\n")[[1]][46:63] %>%
 
 find_stats <- function(name){
   pit_stats %>%
-    filter(Player == name)
+    filter(Player == name) %>%
+    select(-c(sho, '2b', '3b', bk, sfa, sha)) %>%
+    mutate("K/9" = 9*as.numeric(so)/as.numeric(ip),
+           "BB/9" = 9*as.numeric(bb)/as.numeric(ip),
+           "HR/9" = 9*as.numeric(hr)/as.numeric(ip))
 }
 ```
 
@@ -102,11 +106,8 @@ ui <- fluidPage(
                                                           onInitialize = I('function() { this.setValue(""); }'))),
                             
                             uiOutput("Opponent"),
-                         
                             uiOutput("PType1"),
-                         
                             uiOutput("bHand"),
-                         
                             uiOutput("Outcome")),
                
                mainPanel(width = 8,
@@ -131,7 +132,7 @@ ui <- fluidPage(
                           column(2,
                                  div(imageOutput("pic_CE"), style = "height:294px")),
                           column(9,
-                                 div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
+                                 div(dataTableOutput("stats_CE"), style = "font-size: 95%"))),
                         # Put in options for what to look at
                         tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeCEdurab")),
@@ -150,12 +151,17 @@ ui <- fluidPage(
                                                       column(6, plotOutput("zp_plot_CE")),
                                                       column(4))),
                                     tabPanel(title = "Pitch Profiles",
+                                             # Add in pie charts to pitch profiles plus table of results
                                              fluidRow(column(2, uiOutput("xaxisCEpp"), uiOutput("yaxisCEpp")),
                                                       column(6, plotOutput("pp_plot_CE")),
                                                       column(4,
                                                              div(dataTableOutput("pp_table_CE"),
-                                                                 style = "font_size: 80%"))))
+                                                                 style = "font_size: 80%")))),
+                                    tabPanel(title = "Results by Count"
+                                             # Add in location plots and tables of results 
+                                             )
                                     )
+                                    # Add in brooks baseball tables
                         ),
                tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                         fluidRow(
@@ -183,7 +189,7 @@ ui <- fluidPage(
                                              fluidRow(column(2, uiOutput("xaxisKJpp"), uiOutput("yaxisKJpp")),
                                                       column(6, plotOutput("pp_plot_KJ")),
                                                       column(4,
-                                                             div(dataTableOutput("pp_table_CE"),
+                                                             div(dataTableOutput("pp_table_KJ"),
                                                                  style = "font_size: 80%"))))
                                     )
                         )
@@ -589,9 +595,12 @@ server = function(input, output) {
                                 "pp"), 
                          "X-axis Variable", 
                          choices = c("Horizontal Movement",
+                                     "Vertical Movement",
                                      "Spin Rate",
+                                     "Spin Axis",
                                      "Velocity",
-                                     "Vertical Movement"),
+                                     "Horizontal Release Point",
+                                     "Vertical Release Point"),
                          selected = "Horizontal Movement")
         })
       })
@@ -605,9 +614,12 @@ server = function(input, output) {
                                 "pp"), 
                          "Y-axis Variable", 
                          choices = c("Horizontal Movement",
+                                     "Vertical Movement",
                                      "Spin Rate",
+                                     "Spin Axis",
                                      "Velocity",
-                                     "Vertical Movement"),
+                                     "Horizontal Release Point",
+                                     "Vertical Release Point"),
                          selected = "Velocity")
           })
       })
@@ -617,12 +629,16 @@ server = function(input, output) {
       output[[paste0("pp_plot_", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- 
         renderPlot({
           allGames %>%
-            select(Pitcher, RelSpeed, HorzBreak, InducedVertBreak, SpinRate, TaggedPitchType) %>%
-            drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate) %>%
+            select(Pitcher, RelSpeed, HorzBreak, InducedVertBreak, SpinRate, SpinAxis, RelSide, 
+                   RelHeight, TaggedPitchType) %>%
+            drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate, SpinAxis, RelSide, RelHeight) %>%
             rename(Velocity = RelSpeed,
                    "Horizontal Movement" = HorzBreak,
                    "Vertical Movement" = InducedVertBreak,
-                   "Spin Rate" = SpinRate) %>%
+                   "Spin Rate" = SpinRate,
+                   "Spin Axis" = SpinAxis,
+                   "Horizontal Release Point" = RelSide,
+                   "Vertical Release Point" = RelHeight) %>%
             filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", "Connelly Early")) %>%
             ggplot(aes(x = !!sym(input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                collapse = ""), "pp")]]), 
@@ -644,8 +660,11 @@ server = function(input, output) {
                          group_by(TaggedPitchType) %>%
                          summarize(Velocity = round(mean(RelSpeed, na.rm = T), 1),
                                    "Spin Rate" = round(mean(SpinRate, na.rm = T), 1),
+                                   "Spin Axis" = round(mean(SpinAxis, na.rm = T), 1),
                                    "Horizontal Movement" = round(mean(HorzBreak, na.rm = T), 1),
-                                   "Vertical Movement" = round(mean(InducedVertBreak, na.rm = T), 1)) %>%
+                                   "Vertical Movement" = round(mean(InducedVertBreak, na.rm = T), 1),
+                                   "Horizontal Release Point" = round(mean(RelSide, na.rm = T), 1),
+                                   "Vertical Release Pint" = round(mean(RelHeight, na.rm = T), 1)) %>%
                          select(TaggedPitchType, 
                                 input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                               collapse = ""), "pp")]],
