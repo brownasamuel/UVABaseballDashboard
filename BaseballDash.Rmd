@@ -129,7 +129,7 @@ ui <- fluidPage(
                tabPanel(title = "Connelly Early", value = "Connelly Early",
                         fluidRow(
                           column(2,
-                                 imageOutput("pic_CE")),
+                                 div(imageOutput("pic_CE"), style = "height:294px")),
                           column(9,
                                  div(dataTableOutput("stats_CE"), style = "font-size: 80%"))),
                         # Put in options for what to look at
@@ -148,13 +148,19 @@ ui <- fluidPage(
                                     tabPanel(title = "Zone Profile",
                                              fluidRow(column(2, uiOutput("ptypeCEzp"), uiOutput("bhandCEzp")),
                                                       column(6, plotOutput("zp_plot_CE")),
-                                                      column(4)))
+                                                      column(4))),
+                                    tabPanel(title = "Pitch Profiles",
+                                             fluidRow(column(2, uiOutput("xaxisCEpp"), uiOutput("yaxisCEpp")),
+                                                      column(6, plotOutput("pp_plot_CE")),
+                                                      column(4,
+                                                             div(dataTableOutput("pp_table_CE"),
+                                                                 style = "font_size: 80%"))))
                                     )
                         ),
                tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                         fluidRow(
                           column(2,
-                                 imageOutput("pic_KJ")),
+                                 div(imageOutput("pic_KJ"), style = "height:294px")),
                           column(9,
                                  div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
                         tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
@@ -172,6 +178,10 @@ ui <- fluidPage(
                                     tabPanel(title = "Zone Profile",
                                              fluidRow(column(2, uiOutput("ptypeKJzp"), uiOutput("bhandKJzp")),
                                                       column(6, plotOutput("zp_plot_KJ")),
+                                                      column(4))),
+                                    tabPanel(title = "Pitch Profiles",
+                                             fluidRow(column(2, uiOutput("xaxisKJpp"), uiOutput("yaxisKJpp")),
+                                                      column(6, plotOutput("pp_plot_KJ")),
                                                       column(4)))
                                     )
                         )
@@ -545,8 +555,7 @@ server = function(input, output) {
                                                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                  collapse = ""), "zp")]]) %>%
                        mutate(x2 = (1.6/5)*floor((PlateLocSide)/(1.6/5)),
-                              y2 = 1.79 + (1.9/5)*floor((PlateLocHeight - 1.79)/(1.9/5))
-                              ) %>%
+                              y2 = 1.79 + (1.9/5)*floor((PlateLocHeight - 1.79)/(1.9/5))) %>%
                        group_by(x2, y2) %>%
                        summarize(ct = n(), .groups = "drop") %>%
                        mutate(perc = 100*ct/sum(ct))
@@ -558,7 +567,7 @@ server = function(input, output) {
                          ylim(0, 5) +
                          geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
                                                      y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
-                                   aes(x = x, y = y), color = "red") +
+                                   aes(x = x, y = y), color = "red", size = 1.4) +
                          scale_fill_gradient(low = '#232D4B', high = '#E57200', 
                                              limits = c(0, max(locs$perc)), name = "Percentage of Pitches") +
                          theme_bw() + 
@@ -567,12 +576,94 @@ server = function(input, output) {
                                panel.grid.minor = element_blank()) + 
                          labs(x = "Pitch Location(Pitcher POV)", y = "Pitch Height") 
                        })
+  })
+    ### Inner tab 3- Pitch Profiles
+    # Select x-axis variable
+    observe({
+      output[[
+        paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "pp")]] <- renderUI({
+          selectizeInput(paste0("xaxis", 
+                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                                "pp"), 
+                         "X-axis Variable", 
+                         choices = c("Horizontal Movement",
+                                     "Spin Rate",
+                                     "Velocity",
+                                     "Vertical Movement"),
+                         selected = "Horizontal Movement")
+        })
+      })
     
-    })
+    # Select y-axis variable
+    observe({
+      output[[
+        paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "pp")]] <- renderUI({
+          selectizeInput(paste0("yaxis", 
+                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
+                                "pp"), 
+                         "Y-axis Variable", 
+                         choices = c("Horizontal Movement",
+                                     "Spin Rate",
+                                     "Velocity",
+                                     "Vertical Movement"),
+                         selected = "Velocity")
+          })
+      })
+    
+    # Make pitch graph
+    observe({
+      output[[paste0("pp_plot_", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- 
+        renderPlot({
+          allGames %>%
+            select(Pitcher, RelSpeed, HorzBreak, InducedVertBreak, SpinRate, TaggedPitchType) %>%
+            drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate) %>%
+            rename(Velocity = RelSpeed,
+                   "Horizontal Movement" = HorzBreak,
+                   "Vertical Movement" = InducedVertBreak,
+                   "Spin Rate" = SpinRate) %>%
+            filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", "Connelly Early")) %>%
+            ggplot(aes(x = !!sym(input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "pp")]]), 
+                       y = !!sym(input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                               collapse = ""), "pp")]]), 
+                       color = TaggedPitchType)) +
+            geom_point() +
+            theme_bw()
+        })
+      })
+    
+    # Make pitch profile table
+    observe({
+      output[[paste0("pp_table_", 
+                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                       allGames %>%
+                         filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                         drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate) %>%
+                         group_by(TaggedPitchType) %>%
+                         summarize(Velocity = round(mean(RelSpeed, na.rm = T), 1),
+                                   "Spin Rate" = round(mean(SpinRate, na.rm = T), 1),
+                                   "Horizontal Movement" = round(mean(HorzBreak, na.rm = T), 1),
+                                   "Vertical Movement" = round(mean(InducedVertBreak, na.rm = T), 1)) %>%
+                         select(TaggedPitchType, 
+                                input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                              collapse = ""), "pp")]],
+                                input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                              collapse = ""), "pp")]]) %>%
+                         rename("Pitch Type" = TaggedPitchType)
+                       
+                       })
+      })
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
+
+
+View(allGames %>%
+  filter(Pitcher == "Early, Connelly") %>%
+    drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate))
+                                  
 # Tab ideas:
-# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), add in hitters eventually
+# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), add in hitters eventually, 
+# Once we get data for all schools, batter vs pitcher matchups for scouting reports, xStats and WAR
 ```
 
