@@ -182,7 +182,9 @@ ui <- fluidPage(
                                     tabPanel(title = "Pitch Profiles",
                                              fluidRow(column(2, uiOutput("xaxisKJpp"), uiOutput("yaxisKJpp")),
                                                       column(6, plotOutput("pp_plot_KJ")),
-                                                      column(4)))
+                                                      column(4,
+                                                             div(dataTableOutput("pp_table_CE"),
+                                                                 style = "font_size: 80%"))))
                                     )
                         )
                )
@@ -657,11 +659,6 @@ server = function(input, output) {
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
 
-
-View(allGames %>%
-  filter(Pitcher == "Early, Connelly") %>%
-    drop_na(RelSpeed, HorzBreak, InducedVertBreak, SpinRate))
-                                  
 # Tab ideas:
 # Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), add in hitters eventually, 
 # Once we get data for all schools, batter vs pitcher matchups for scouting reports, xStats and WAR
