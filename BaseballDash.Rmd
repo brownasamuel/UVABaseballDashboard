@@ -152,10 +152,10 @@ ui <- fluidPage(
                                              # Add in batter handedness that applies to both
                                              fluidRow(p(""),
                                                       div(dataTableOutput("tab_moveout_CE"), 
-                                                          style = "font-size:90%")),
+                                                          style = "font-size: 85%")),
                                              fluidRow(p("Usage Table"),
                                                       div(dataTableOutput("tab_usage_CE"), 
-                                                          style = "font-size:90%"))),
+                                                          style = "font-size: 90%"))),
                                     tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeCEdurab")),
                                                       column(6, plotOutput("pc_graph_CE")),
@@ -714,20 +714,21 @@ server = function(input, output) {
                          Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall")),
                          'Strike %' = 100*round(Strikes/Count, 3),
                          Balls = sum(PitchCall %in% c("BallCalled", "BallinDirt", "BallIntentional")),
-                         'Strike %' = 100*round(Balls/Count, 3),
+                         'Ball %' = 100*round(Balls/Count, 3),
+                         BIP = sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
+                                                     "Error", "FieldersChoice") | 
+                                     (TaggedHitType == "Bunt" & PlayResult == "Sacrifice")),
+                         'BIP %' = (100*BIP/Count) %>% round(1),
                          Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
                          'Swing %' = 100*round(Swings/Count, 3),
                          Fouls = sum(PitchCall == 'FoulBall'),
-                          'Foul %' = 100*round(Fouls/Count, 3),
+                          'Foul %' = 100*round(Fouls/Swings, 3),
                          SwStr = sum(PitchCall == "StrikeSwinging"),
                          'Whiff %' = 100*round(SwStr/Swings, 3),
-                         'BIP %' = (100*sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
-                                                              "Error", "FieldersChoice") | 
-                                              (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))/Count) %>% round(1),
-                         "GB %" = (100*sum(TaggedHitType == "GroundBall")/Count) %>% round(1),
-                         "FB %" = (100*sum(TaggedHitType == "FlyBall")/Count) %>% round(1),
-                         "GB %" = (100*sum(TaggedHitType == "GroundBall")/Count) %>% round(1),
-                         "LD %" = (100*sum(TaggedHitType == "LineDrive")/Count) %>% round(1),
+                         "GB %" = (100*sum(TaggedHitType == "GroundBall")/BIP) %>% round(1),
+                         "FB %" = (100*sum(TaggedHitType == "FlyBall")/BIP) %>% round(1),
+                         "PU %" = (100*sum(TaggedHitType == "Popup")/BIP) %>% round(1),
+                         "LD %" = (100*sum(TaggedHitType == "LineDrive")/BIP) %>% round(1),
                          HR = sum(PlayResult == "HomeRun"),
                          BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
                            sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
@@ -736,7 +737,32 @@ server = function(input, output) {
                          mutate(Usage = (100*Count/sum(Count)) %>% round(1)) %>%
                          relocate(Usage, .after = Count) %>%
                          rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, "Percentage Thrown" = Usage) %>%
-                         select(-c(Strikes, Balls, Swings, Fouls, SwStr))
+                         select(-c(Strikes, Balls, Swings, BIP, Fouls, SwStr)) %>%
+                         datatable(container = withTags(table(
+                           class = 'display',
+                           thead(
+                             tr(
+                               th(colspan = 3, ''),
+                               th(colspan = 7, 'Season Averages'),
+                               th(colspan = 4, 'Percentages of All Pitches'),
+                               th(colspan = 2, "Percentages of Swings"),
+                               th(colspan = 4, 'Percentages of Batted Balls'),
+                               th(colspan = 2, 'Results')
+                             ),
+                             tr(th(""), th("Name"), th("Pitch Type", style = "border-right: solid 2px;"),
+                                th("Count"), th("Percentage Thrown"), th("Velo"), th("Vertical Break"), 
+                                th("Horizontal Break"), th("Vertical Release"), 
+                                th("Horizontal Release", style = "border-right: solid 2px;"), 
+                                th("Strike %"), th("Ball %"), th("BIP%"),
+                                th("Swing %", style = "border-right: solid 2px;"), 
+                                th("Foul %"), th("Whiff %", style = "border-right: solid 2px;"), 
+                                th("GB %"), th("FB %"), th("PU %"), th("LD %", style = "border-right: solid 2px;"),
+                                th("HR"), th("BABIP"))
+                             ))
+                           ),
+                           options = list(columnDefs = list(list(targets = "_all", className = "dt-center"))
+                                          )) %>%
+                         formatStyle(c(2, 9, 13, 15, 19), `border-right` = "solid 2px")
                        })
       })
     # Usage table
