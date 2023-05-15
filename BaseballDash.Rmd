@@ -152,10 +152,10 @@ ui <- fluidPage(
                                              # Add in batter handedness that applies to both
                                              fluidRow(p(""),
                                                       div(dataTableOutput("tab_moveout_CE"), 
-                                                          style = "font-size:95%")),
+                                                          style = "font-size:90%")),
                                              fluidRow(p("Usage Table"),
                                                       div(dataTableOutput("tab_usage_CE"), 
-                                                          style = "font-size:75%"))),
+                                                          style = "font-size:90%"))),
                                     tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeCEdurab")),
                                                       column(6, plotOutput("pc_graph_CE")),
