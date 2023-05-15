@@ -724,6 +724,10 @@ server = function(input, output) {
                          'BIP %' = (100*sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
                                                               "Error", "FieldersChoice") | 
                                               (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))/Count) %>% round(1),
+                         "GB %" = (100*sum(TaggedHitType == "GroundBall")/Count) %>% round(1),
+                         "FB %" = (100*sum(TaggedHitType == "FlyBall")/Count) %>% round(1),
+                         "GB %" = (100*sum(TaggedHitType == "GroundBall")/Count) %>% round(1),
+                         "LD %" = (100*sum(TaggedHitType == "LineDrive")/Count) %>% round(1),
                          HR = sum(PlayResult == "HomeRun"),
                          BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
                            sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
