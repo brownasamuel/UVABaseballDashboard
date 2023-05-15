@@ -193,7 +193,7 @@ ui <- fluidPage(
                                              # Add in batter handedness that applies to both
                                              fluidRow(p(""),
                                                       div(dataTableOutput("tab_moveout_KJ"), 
-                                                          style = "font-size:90%")),
+                                                          style = "font-size: 85%")),
                                              fluidRow(p("Usage Table"),
                                                       div(dataTableOutput("tab_usage_KJ"), 
                                                           style = "font-size:90%"))),
