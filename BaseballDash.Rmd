@@ -58,9 +58,9 @@ find_stats <- function(name){
   pit_stats %>%
     filter(Player == name) %>%
     select(-c(sho, '2b', '3b', bk, sfa, sha)) %>%
-    mutate("K/9" = 9*as.numeric(so)/as.numeric(ip),
-           "BB/9" = 9*as.numeric(bb)/as.numeric(ip),
-           "HR/9" = 9*as.numeric(hr)/as.numeric(ip))
+    mutate("K/9" = (9*as.numeric(so)/as.numeric(ip)) %>% round(2),
+           "BB/9" = (9*as.numeric(bb)/as.numeric(ip)) %>% round(2),
+           "HR/9" = (9*as.numeric(hr)/as.numeric(ip)) %>% round(2))
 }
 ```
 
@@ -134,7 +134,29 @@ ui <- fluidPage(
                           column(9,
                                  div(dataTableOutput("stats_CE"), style = "font-size: 95%"))),
                         # Put in options for what to look at
-                        tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
+                        tabsetPanel(tabPanel(title = "Overview",
+                                             # Add in brooks baseball summary type thing
+                                             ),
+                                    tabPanel(title = "Scatter Plots",
+                                             # Add in pie charts plus table of results
+                                             fluidRow(column(2, uiOutput("xaxisCEsp"), uiOutput("yaxisCEsp")),
+                                                      column(6, plotOutput("sp_plot_CE")),
+                                                      column(4, div(dataTableOutput("sp_table_CE"),
+                                                                    style = "font_size: 80%")))),
+                                    tabPanel(title = "Zone Profile",
+                                             # Add in counts
+                                             fluidRow(column(2, uiOutput("ptypeCEzp"), uiOutput("bhandCEzp")),
+                                                      column(6, plotOutput("zp_plot_CE")),
+                                                      column(4))),
+                                    tabPanel(title = "Tables",
+                                             # Add in batter handedness that applies to both
+                                             fluidRow(p(""),
+                                                      div(dataTableOutput("tab_moveout_CE"), 
+                                                          style = "font-size:95%")),
+                                             fluidRow(p("Usage Table"),
+                                                      div(dataTableOutput("tab_usage_CE"), 
+                                                          style = "font-size:75%"))),
+                                    tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeCEdurab")),
                                                       column(6, plotOutput("pc_graph_CE")),
                                                       column(4, 
@@ -143,33 +165,39 @@ ui <- fluidPage(
                                     tabPanel(title = "Game-to-game Performance",
                                              fluidRow(column(2, uiOutput("ptypeCEgtg"), uiOutput("metricCEgtg")),
                                                       column(6, plotOutput("gtg_graph_CE")),
-                                                      column(4, 
-                                                             div(dataTableOutput("gtg_table_CE"), 
-                                                                 style = "font-size: 80%")))),
-                                    tabPanel(title = "Zone Profile",
-                                             fluidRow(column(2, uiOutput("ptypeCEzp"), uiOutput("bhandCEzp")),
-                                                      column(6, plotOutput("zp_plot_CE")),
-                                                      column(4))),
-                                    tabPanel(title = "Pitch Profiles",
-                                             # Add in pie charts to pitch profiles plus table of results
-                                             fluidRow(column(2, uiOutput("xaxisCEpp"), uiOutput("yaxisCEpp")),
-                                                      column(6, plotOutput("pp_plot_CE")),
-                                                      column(4,
-                                                             div(dataTableOutput("pp_table_CE"),
-                                                                 style = "font_size: 80%")))),
-                                    tabPanel(title = "Results by Count"
-                                             # Add in location plots and tables of results 
-                                             )
+                                                      column(4, div(dataTableOutput("gtg_table_CE"), 
+                                                                    style = "font-size: 80%"))))
                                     )
-                                    # Add in brooks baseball tables
                         ),
                tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
                         fluidRow(
                           column(2,
                                  div(imageOutput("pic_KJ"), style = "height:294px")),
                           column(9,
-                                 div(dataTableOutput("stats_KJ"), style = "font-size: 80%"))),
-                        tabsetPanel(tabPanel(title = "In-Game Durability", value = "durab",
+                                 div(dataTableOutput("stats_KJ"), style = "font-size: 95%"))),
+                        tabsetPanel(tabPanel(title = "Overview",
+                                             # Add in brooks baseball summary type thing
+                                             ),
+                                    tabPanel(title = "Scatter Plots",
+                                             # Add in pie charts plus table of results
+                                             fluidRow(column(2, uiOutput("xaxisKJsp"), uiOutput("yaxisKJsp")),
+                                                      column(6, plotOutput("sp_plot_KJ")),
+                                                      column(4, div(dataTableOutput("sp_table_KJ"),
+                                                                    style = "font_size: 80%")))),
+                                    tabPanel(title = "Zone Profile",
+                                             # Add in counts
+                                             fluidRow(column(2, uiOutput("ptypeKJzp"), uiOutput("bhandKJzp")),
+                                                      column(6, plotOutput("zp_plot_KJ")),
+                                                      column(4))),
+                                    tabPanel(title = "Tables",
+                                             # Add in batter handedness that applies to both
+                                             fluidRow(p(""),
+                                                      div(dataTableOutput("tab_moveout_KJ"), 
+                                                          style = "font-size:95%")),
+                                             fluidRow(p("Usage Table"),
+                                                      div(dataTableOutput("tab_usage_KJ"), 
+                                                          style = "font-size:75%"))),
+                                    tabPanel(title = "In-Game Durability", value = "durab",
                                              fluidRow(column(2, uiOutput("ptypeKJdurab")),
                                                       column(6, plotOutput("pc_graph_KJ")),
                                                       column(4, 
@@ -178,19 +206,8 @@ ui <- fluidPage(
                                     tabPanel(title = "Game-to-game Performance",
                                              fluidRow(column(2, uiOutput("ptypeKJgtg"), uiOutput("metricKJgtg")),
                                                       column(6, plotOutput("gtg_graph_KJ")),
-                                                      column(4, 
-                                                             div(dataTableOutput("gtg_table_KJ"), 
-                                                                 style = "font-size: 80%")))),
-                                    tabPanel(title = "Zone Profile",
-                                             fluidRow(column(2, uiOutput("ptypeKJzp"), uiOutput("bhandKJzp")),
-                                                      column(6, plotOutput("zp_plot_KJ")),
-                                                      column(4))),
-                                    tabPanel(title = "Pitch Profiles",
-                                             fluidRow(column(2, uiOutput("xaxisKJpp"), uiOutput("yaxisKJpp")),
-                                                      column(6, plotOutput("pp_plot_KJ")),
-                                                      column(4,
-                                                             div(dataTableOutput("pp_table_KJ"),
-                                                                 style = "font_size: 80%"))))
+                                                      column(4, div(dataTableOutput("gtg_table_KJ"), 
+                                                                    style = "font-size: 80%"))))
                                     )
                         )
                )
@@ -585,14 +602,14 @@ server = function(input, output) {
                          labs(x = "Pitch Location(Pitcher POV)", y = "Pitch Height") 
                        })
   })
-    ### Inner tab 3- Pitch Profiles
+    ### Inner tab 4- Scatter plots
     # Select x-axis variable
     observe({
       output[[
-        paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "pp")]] <- renderUI({
+        paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "sp")]] <- renderUI({
           selectizeInput(paste0("xaxis", 
                                 paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
-                                "pp"), 
+                                "sp"), 
                          "X-axis Variable", 
                          choices = c("Horizontal Movement",
                                      "Vertical Movement",
@@ -608,10 +625,10 @@ server = function(input, output) {
     # Select y-axis variable
     observe({
       output[[
-        paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "pp")]] <- renderUI({
+        paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "sp")]] <- renderUI({
           selectizeInput(paste0("yaxis", 
                                 paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
-                                "pp"), 
+                                "sp"), 
                          "Y-axis Variable", 
                          choices = c("Horizontal Movement",
                                      "Vertical Movement",
@@ -626,7 +643,7 @@ server = function(input, output) {
     
     # Make pitch graph
     observe({
-      output[[paste0("pp_plot_", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- 
+      output[[paste0("sp_plot_", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- 
         renderPlot({
           allGames %>%
             select(Pitcher, RelSpeed, HorzBreak, InducedVertBreak, SpinRate, SpinAxis, RelSide, 
@@ -641,9 +658,9 @@ server = function(input, output) {
                    "Vertical Release Point" = RelHeight) %>%
             filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", "Connelly Early")) %>%
             ggplot(aes(x = !!sym(input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                               collapse = ""), "pp")]]), 
+                                                               collapse = ""), "sp")]]), 
                        y = !!sym(input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                               collapse = ""), "pp")]]), 
+                                                               collapse = ""), "sp")]]), 
                        color = TaggedPitchType)) +
             geom_point() +
             theme_bw()
@@ -652,7 +669,7 @@ server = function(input, output) {
     
     # Make pitch profile table
     observe({
-      output[[paste0("pp_table_", 
+      output[[paste0("sp_table_", 
                      paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
                        allGames %>%
                          filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
@@ -667,13 +684,95 @@ server = function(input, output) {
                                    "Vertical Release Pint" = round(mean(RelHeight, na.rm = T), 1)) %>%
                          select(TaggedPitchType, 
                                 input[[paste0("xaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                              collapse = ""), "pp")]],
+                                                              collapse = ""), "sp")]],
                                 input[[paste0("yaxis", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                              collapse = ""), "pp")]]) %>%
+                                                              collapse = ""), "sp")]]) %>%
                          rename("Pitch Type" = TaggedPitchType)
                        
                        })
       })
+    ### Inner tab 5- Tables
+    # Movement and Outcomes
+    observe({
+      output[[paste0("tab_moveout_", 
+                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                       if(is.null(input$Dash)){
+                         return(NULL)}
+                       else {
+                         allGames %>%
+                           filter(PitchCall != "",
+                           TaggedPitchType != "",
+                           Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                           group_by(Pitcher, TaggedPitchType) %>%
+                           summarize(Count = n(),
+                           Velo = paste(round(quantile(RelSpeed, .25), 1), 
+                                        "-", round(quantile(RelSpeed, .75), 1)),
+                           'Vertical Break' = round(mean(InducedVertBreak), 2),
+                           'Horizontal Break' = round(mean(HorzBreak), 2),
+                           'Vertical Release' = round(mean(RelHeight), 2),
+                           'Horizontal Release' = round(mean(RelSide), 2),
+                           Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall")),
+                           'Strike %' = 100*round(Strikes/Count, 3),
+                           Balls = sum(PitchCall %in% c("BallCalled", "BallinDirt", "BallIntentional")),
+                           'Strike %' = 100*round(Balls/Count, 3),
+                           Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                           'Swing %' = 100*round(Swings/Count, 3),
+                           Fouls = sum(PitchCall == 'FoulBall'),
+                            'Foul %' = 100*round(Fouls/Count, 3),
+                           SwStr = sum(PitchCall == "StrikeSwinging"),
+                           'Whiff %' = 100*round(SwStr/Swings, 3),
+                           'BIP %' = (100*sum(PlayResult %in% c("Single", "Double", "Triple", "Out", 
+                                                                "Error", "FieldersChoice") | 
+                                                (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))/Count) %>% round(1),
+                           HR = sum(PlayResult == "HomeRun"),
+                           BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                             sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice") | 
+                                   (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                           .groups = "drop") %>%
+                           mutate(Usage = (100*Count/sum(Count)) %>% round(1)) %>%
+                           relocate(Usage, .after = Count) %>%
+                           rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, "Percentage Thrown" = Usage) %>%
+                           select(-c(Strikes, Balls, Swings, Fouls, SwStr))
+                         }
+                       })
+      })
+    # Usage table
+    observe({
+      output[[paste0("tab_usage_", 
+                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
+                       if(is.null(input$Dash)){
+                         return(NULL)}
+                       else {
+                         allGames %>%
+                           filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                           mutate(CountType = case_when(
+                             Balls == 0 & Strikes == 0 ~ "All Counts, Even, First Pitch",
+                             Balls == Strikes & Strikes != 2 ~ "All Counts, Even",
+                             Balls == Strikes & Strikes == 2 ~ "All Counts, Even, Two Strikes",
+                             
+                             Balls > Strikes & Strikes != 2 ~ "All Counts, Batter Ahead",
+                             Balls > Strikes & Strikes == 2 ~ "All Counts, Full Count",
+                             
+                             Balls < Strikes & Strikes != 2 ~ "All Counts, Pitcher Ahead",
+                             Balls < Strikes & Strikes == 2 ~ "All Counts, Pitcher Ahead, Two Strikes"
+                             ))  %>%
+                           separate_rows(CountType, sep = ", ") %>%
+                           group_by(BatterSide, CountType, TaggedPitchType) %>%
+                           summarize(ct = n(), .groups = "drop") %>%
+                           pivot_wider(names_from = TaggedPitchType, values_from = ct) %>%
+                           replace(is.na(.), 0) %>%
+                           rowwise() %>%
+                           mutate(total = sum(c_across(where(is.numeric)))) %>%
+                           ungroup() %>%
+                           mutate_if(is.numeric, list(~ round(100*./total, 1))) %>%
+                           select(-total) %>%
+                           rename("Batter Side" = BatterSide, "Count Type" = CountType) %>%
+                           datatable(options = list(pageLength = 14))
+                         }
+                       })
+      })
+    
+    
 }
 
 shinyApp(ui, server, options = list(height = 920, width = 980))
