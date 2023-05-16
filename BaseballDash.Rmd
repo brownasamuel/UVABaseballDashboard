@@ -22,7 +22,10 @@ allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 
 virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
   select(-c(50:167))
+```
 
+
+```{r setup, include=FALSE}
 # Get a player's picture
 find_pic <- function(name){
   tmpfile <- read_html(paste("https://virginiasports.com/player/", 
@@ -39,7 +42,7 @@ find_pic <- function(name){
     list(src = tmpfile, contentType = "image/jpeg", width = 200, height = 260)
 }
 
-# Get a player's stats
+# Get a player's stats for their profile
 raw_text <- map("https://static.virginiasports.com/custompages/sports/m-basebl/stats/2022-2023/SeasonStats.pdf?_gl=1*11rpgpg*_ga*MTg1NjExNzA0NC4xNjgwMTg0ODQy*_ga_X9RVV1P9QW*MTY4MTkyNDQ1Ni4xMC4xLjE2ODE5MjQ4NDUuNjAuMC4w&_ga=2.154379455.640199771.1681924456-1856117044.1680184842", 
                 pdf_text)[[1]]
 pit_stats <- str_split(raw_text, "\n")[[1]][46:63] %>%
@@ -62,6 +65,102 @@ find_stats <- function(name){
            "BB/9" = (9*as.numeric(bb)/as.numeric(ip)) %>% round(2),
            "HR/9" = (9*as.numeric(hr)/as.numeric(ip)) %>% round(2))
 }
+
+# Player tab function
+playerTab <- function(name){
+  tabPanel(title = name, value = name,
+                        fluidRow(
+                          column(2,
+                                 div(imageOutput(paste0("pic_", 
+                                                        paste0(unlist(str_extract_all(name, "[:upper:]")), 
+                                                               collapse = ""))), style = "height:294px")),
+                          column(9,
+                                 div(dataTableOutput(paste0("stats_", 
+                                                        paste0(unlist(str_extract_all(name, "[:upper:]")), 
+                                                               collapse = ""))), style = "font-size: 95%"))),
+                        # Put in options for what to look at
+                        tabsetPanel(tabPanel(title = "Overview",
+                                             # Add in brooks baseball summary type thing
+                                             ),
+                                    tabPanel(title = "Scatter Plots",
+                                             # Add in pie charts plus table of results
+                                             fluidRow(column(2, uiOutput(paste0(
+                                               "xaxis", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "sp")), 
+                                                        uiOutput(paste0(
+                                               "yaxis", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                               collapse = ""), "sp"))),
+                                                      column(6, plotOutput(paste0(
+                                               "sp_plot_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = "")))),
+                                                      column(4, 
+                                                             div(dataTableOutput(paste0(
+                                               "sp_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""))),
+                                                                 style = "font_size: 80%")))),
+                                    tabPanel(title = "Zone Profile",
+                                             # Add in counts
+                                             fluidRow(column(2, 
+                                                             uiOutput(paste0(
+                                               "ptype", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "zp")), 
+                                                             uiOutput(paste0(
+                                               "bhand", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "zp"))),
+                                                      column(6, 
+                                                             plotOutput(paste0(
+                                               "zp_plot_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = "")))))),
+                                    tabPanel(title = "Tables",
+                                             # Add in batter handedness that applies to both
+                                             fluidRow(p("Movement, Release, and Outcomes", 
+                                                        style = "text-align: center; font-weight: bold; font-size: 130%; 
+                                                        padding-top: 25px; padding-bottom: 10px"),
+                                                      div(dataTableOutput(paste0(
+                                               "tab_moveout_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""))), 
+                                                          style = "font-size: 85%")),
+                                             fluidRow(p("Usage", 
+                                                        style = "text-align: center; font-weight: bold; font-size: 130%; 
+                                                        padding-top: 25px; padding-bottom: 10px"),
+                                                      div(dataTableOutput(paste0(
+                                               "tab_usage_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""))), 
+                                                          style = "font-size: 90%"))),
+                                    tabPanel(title = "In-Game Durability", value = "durab",
+                                             fluidRow(column(2, 
+                                                             uiOutput(paste0(
+                                               "ptype", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "durab"))),
+                                                      column(6, 
+                                                             plotOutput(paste0(
+                                               "pc_graph_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = "")))),
+                                                      column(4, 
+                                                             div(dataTableOutput(paste0(
+                                               "pc_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""))), 
+                                                                 style = "font-size: 80%")))),
+                                    tabPanel(title = "Game-to-game Performance",
+                                             fluidRow(column(2, 
+                                                             uiOutput(paste0(
+                                               "ptype", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "gtg")), 
+                                                             uiOutput(paste0(
+                                               "metric", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""), "gtg"))),
+                                                      column(6, 
+                                                             plotOutput(paste0(
+                                               "gtg_graph_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = "")))),
+                                                      column(4, div(dataTableOutput(paste0(
+                                               "gtg_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                              collapse = ""))), 
+                                                                    style = "font-size: 80%"))))
+                                    )
+                        )
+}
+
 ```
 
 ```{r ui and server, echo = FALSE}
@@ -127,89 +226,8 @@ ui <- fluidPage(
     ### Tab 2- Player profiles(Should I add in a header to each?)
     navbarMenu(title = "Pitcher Profiles",
                # Put in sub tabs for each player
-               tabPanel(title = "Connelly Early", value = "Connelly Early",
-                        fluidRow(
-                          column(2,
-                                 div(imageOutput("pic_CE"), style = "height:294px")),
-                          column(9,
-                                 div(dataTableOutput("stats_CE"), style = "font-size: 95%"))),
-                        # Put in options for what to look at
-                        tabsetPanel(tabPanel(title = "Overview",
-                                             # Add in brooks baseball summary type thing
-                                             ),
-                                    tabPanel(title = "Scatter Plots",
-                                             # Add in pie charts plus table of results
-                                             fluidRow(column(2, uiOutput("xaxisCEsp"), uiOutput("yaxisCEsp")),
-                                                      column(6, plotOutput("sp_plot_CE")),
-                                                      column(4, div(dataTableOutput("sp_table_CE"),
-                                                                    style = "font_size: 80%")))),
-                                    tabPanel(title = "Zone Profile",
-                                             # Add in counts
-                                             fluidRow(column(2, uiOutput("ptypeCEzp"), uiOutput("bhandCEzp")),
-                                                      column(6, plotOutput("zp_plot_CE")),
-                                                      column(4))),
-                                    tabPanel(title = "Tables",
-                                             # Add in batter handedness that applies to both
-                                             fluidRow(p(""),
-                                                      div(dataTableOutput("tab_moveout_CE"), 
-                                                          style = "font-size: 85%")),
-                                             fluidRow(p("Usage Table"),
-                                                      div(dataTableOutput("tab_usage_CE"), 
-                                                          style = "font-size: 90%"))),
-                                    tabPanel(title = "In-Game Durability", value = "durab",
-                                             fluidRow(column(2, uiOutput("ptypeCEdurab")),
-                                                      column(6, plotOutput("pc_graph_CE")),
-                                                      column(4, 
-                                                             div(dataTableOutput("pc_table_CE"), 
-                                                                 style = "font-size: 80%")))),
-                                    tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(2, uiOutput("ptypeCEgtg"), uiOutput("metricCEgtg")),
-                                                      column(6, plotOutput("gtg_graph_CE")),
-                                                      column(4, div(dataTableOutput("gtg_table_CE"), 
-                                                                    style = "font-size: 80%"))))
-                                    )
-                        ),
-               tabPanel(title = "Kevin Jaxel", value = "Kevin Jaxel",
-                        fluidRow(
-                          column(2,
-                                 div(imageOutput("pic_KJ"), style = "height:294px")),
-                          column(9,
-                                 div(dataTableOutput("stats_KJ"), style = "font-size: 95%"))),
-                        tabsetPanel(tabPanel(title = "Overview",
-                                             # Add in brooks baseball summary type thing
-                                             ),
-                                    tabPanel(title = "Scatter Plots",
-                                             # Add in pie charts plus table of results
-                                             fluidRow(column(2, uiOutput("xaxisKJsp"), uiOutput("yaxisKJsp")),
-                                                      column(6, plotOutput("sp_plot_KJ")),
-                                                      column(4, div(dataTableOutput("sp_table_KJ"),
-                                                                    style = "font_size: 80%")))),
-                                    tabPanel(title = "Zone Profile",
-                                             # Add in counts
-                                             fluidRow(column(2, uiOutput("ptypeKJzp"), uiOutput("bhandKJzp")),
-                                                      column(6, plotOutput("zp_plot_KJ")),
-                                                      column(4))),
-                                    tabPanel(title = "Tables",
-                                             # Add in batter handedness that applies to both
-                                             fluidRow(p(""),
-                                                      div(dataTableOutput("tab_moveout_KJ"), 
-                                                          style = "font-size: 85%")),
-                                             fluidRow(p("Usage Table"),
-                                                      div(dataTableOutput("tab_usage_KJ"), 
-                                                          style = "font-size:90%"))),
-                                    tabPanel(title = "In-Game Durability", value = "durab",
-                                             fluidRow(column(2, uiOutput("ptypeKJdurab")),
-                                                      column(6, plotOutput("pc_graph_KJ")),
-                                                      column(4, 
-                                                             div(dataTableOutput("pc_table_KJ"), 
-                                                                 style = "font-size: 80%")))),
-                                    tabPanel(title = "Game-to-game Performance",
-                                             fluidRow(column(2, uiOutput("ptypeKJgtg"), uiOutput("metricKJgtg")),
-                                                      column(6, plotOutput("gtg_graph_KJ")),
-                                                      column(4, div(dataTableOutput("gtg_table_KJ"), 
-                                                                    style = "font-size: 80%"))))
-                                    )
-                        )
+               playerTab("Connelly Early"),
+               playerTab("Kevin Jaxel")
                )
     )
   )
