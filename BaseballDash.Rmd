@@ -25,7 +25,7 @@ virginia <-  allGames %>%
 ```
 
 
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 # Get a player's picture
 find_pic <- function(name){
   tmpfile <- read_html(paste("https://virginiasports.com/player/", 
