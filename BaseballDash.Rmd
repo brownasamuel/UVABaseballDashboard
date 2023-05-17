@@ -22,10 +22,7 @@ allGames <- read.csv("C:/Users/brown/Documents/GitHub/UVABaseballDashboard/2023 
 virginia <-  allGames %>%
   filter(PitcherTeam == 'Virginia') %>%
   select(-c(50:167))
-```
 
-
-```{r, include=FALSE}
 # Get a player's picture
 find_pic <- function(name){
   tmpfile <- read_html(paste("https://virginiasports.com/player/", 
