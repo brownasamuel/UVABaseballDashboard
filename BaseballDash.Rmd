@@ -42,15 +42,16 @@ find_pic <- function(name){
 # Get a player's stats for their profile
 raw_text <- map("https://static.virginiasports.com/custompages/sports/m-basebl/stats/2022-2023/SeasonStats.pdf?_gl=1*11rpgpg*_ga*MTg1NjExNzA0NC4xNjgwMTg0ODQy*_ga_X9RVV1P9QW*MTY4MTkyNDQ1Ni4xMC4xLjE2ODE5MjQ4NDUuNjAuMC4w&_ga=2.154379455.640199771.1681924456-1856117044.1680184842", 
                 pdf_text)[[1]]
-pit_stats <- str_split(raw_text, "\n")[[1]][46:63] %>%
+pit_stats <- str_split(raw_text, "\n")[[1]][which.max(str_detect(str_split(raw_text, "\n")[[1]], "b/avg")) : 
+                                 max(which(str_detect(str_split(raw_text, "\n")[[1]], "^[0-9]")))] %>%
   str_squish() %>%
   sub(".*?\\d ", "", x = .) %>%
   sub(" ", "", x = .) %>%
   sub("Playerera", "Player era", x = .) %>%
   data.frame() %>%
-  slice(-5) %>%
   row_to_names(row_number = 1) %>%
   separate(names(.), into = str_split(names(.), " ")[[1]], sep = " ") %>%
+  drop_na(era) %>%
   mutate(Init = sapply(str_extract_all(Player, "[:upper:]"), function(x) x[2]),
          Player = str_replace(Player, Init, paste(" ", Init, sep = "")),
          Player = trimws(Player)) %>%
