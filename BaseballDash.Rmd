@@ -80,6 +80,38 @@ playerTab <- function(name){
            tabsetPanel(tabPanel(title = "Overview",
                                 # Add in brooks baseball summary type thing
                                 ),
+                       
+                       tabPanel(title = "Game Summaries",
+                                sidebarLayout(
+                                  sidebarPanel(width = 4,
+                                               # Choose opponents
+                                               uiOutput(paste0(
+                                                 "Opponent", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                                    collapse = ""), "gs")),
+                                               # Choose pitch types
+                                               uiOutput(paste0(
+                                                 "pType", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                                    collapse = ""), "gs")),
+                                               # Choose batter handedness
+                                               uiOutput(paste0(
+                                                 "bHand", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                                    collapse = ""), "gs")),
+                                               # Choose outcomes
+                                               uiOutput(paste0(
+                                                 "Outcome", paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                                    collapse = ""), "gs"))
+                                               ),
+                                  
+                                  
+                                  mainPanel(width = 8, 
+                                            div(plotOutput(paste0("pitchZone", paste0(unlist(str_extract_all(name, "[:upper:]")), collapse = ""), "gs"))))),
+                                  
+                                  fluidRow(
+                                    column(12,
+                                           div(DT::dataTableOutput(paste0("pitchTable", paste0(unlist(str_extract_all(name, "[:upper:]")), collapse = ""), "gs")), 
+                                               style = "font-size: 80%; width: 100%")))
+                                ),
+                       
                        tabPanel(title = "Scatter Plots",
                                 # Add in pie charts plus table of results
                                 fluidRow(column(2, uiOutput(paste0(
@@ -98,7 +130,8 @@ playerTab <- function(name){
                                                              paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                                     collapse = ""))),
                                                              style = "font_size: 80%")))),
-                                tabPanel(title = "Zone Profile",
+                       
+                       tabPanel(title = "Zone Profile",
                                          # Add in counts
                                          fluidRow(column(2, 
                                                          uiOutput(paste0(
@@ -109,9 +142,11 @@ playerTab <- function(name){
                                                                            collapse = ""), "zp"))),
                                                   column(6, 
                                                          plotOutput(paste0(
-                                                           "zp_plot_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
-                                                                              collapse = "")))))),
-                                tabPanel(title = "Tables",
+                                                           "zp_plot_", 
+                                                           paste0(unlist(str_extract_all(name,"[:upper:]")), 
+                                                                  collapse = "")))))),
+                       
+                       tabPanel(title = "Tables",
                                          # Add in batter handedness that applies to both
                                          fluidRow(p("Movement, Release, and Outcomes", 
                                                     style = "text-align: center; font-weight: bold; font-size: 130%; 
@@ -127,7 +162,8 @@ playerTab <- function(name){
                                            "tab_usage_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
                                                       style = "font-size: 90%"))),
-                                tabPanel(title = "In-Game Durability", value = "durab",
+                       
+                       tabPanel(title = "In-Game Durability", value = "durab",
                                          fluidRow(column(2, 
                                                          uiOutput(paste0(
                                            "ptype", paste0(unlist(str_extract_all(name,"[:upper:]")), 
@@ -141,7 +177,8 @@ playerTab <- function(name){
                                            "pc_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
                                                              style = "font-size: 80%")))),
-                                tabPanel(title = "Game-to-game Performance",
+                       
+                       tabPanel(title = "Game-to-game Performance",
                                          fluidRow(column(2, 
                                                          uiOutput(paste0(
                                            "ptype", paste0(unlist(str_extract_all(name,"[:upper:]")), 
@@ -157,8 +194,8 @@ playerTab <- function(name){
                                            "gtg_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
                                                                 style = "font-size: 80%"))))
-                                    )
-                        )
+                       )
+           )
 }
 
 ```
@@ -337,6 +374,7 @@ server = function(input, output) {
         coord_equal()
     }
   })
+  
   # Pitch results table
   output$mytable <- DT::renderDataTable({
     if(is.null(input$PitchType1)){
@@ -388,6 +426,151 @@ server = function(input, output) {
                      })
   })
   ##########################
+  ### Inner tab 2 - Game Summaries
+  # Select opponent
+  observe({
+    output[[
+        paste0("Opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- renderUI({
+          pickerInput(paste0("opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs"), 
+                      "Game", 
+                      choices = c(virginia %>% 
+                                    filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                    pull(opponent) %>% 
+                                    unique()),
+                      selected = c(virginia %>% 
+                                    filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                    pull(opponent) %>% 
+                                    unique()),
+                      options = list('actions-box' = TRUE),
+                      multiple = TRUE)
+          })
+    })
+  
+  # Select pitch type
+  observe({
+    output[[
+        paste0("pType", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- renderUI({
+          pickerInput(paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs"), 
+                      "Pitch Type", 
+                      choices = virginia %>% 
+                        filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                               opponent %in% input[[paste0("opponent", 
+                                                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>% 
+                        pull(TaggedPitchType) %>% 
+                        unique(), 
+                      selected = virginia %>% 
+                        filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                               opponent %in% input[[paste0("opponent", 
+                                                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>% 
+                        pull(TaggedPitchType) %>% 
+                        unique(),
+                      options = list('actions-box' = TRUE),
+                      multiple = TRUE)
+          })
+    })
+  
+  # Select batter handedness
+  observe({
+    output[[
+        paste0("bHand", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- renderUI({
+    pickerInput(paste0("bhand", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs"), 
+                "Batter handedness", 
+                choices = c("Right", "Left"), 
+                selected = c("Right", "Left"),
+                options = list('actions-box' = TRUE),
+                multiple = TRUE)
+          })
+    })
+  
+  # Select outcome
+  observe({
+    output[[
+        paste0("Outcome", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- renderUI({
+    pickerInput(paste0("outcome", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs"), 
+                "Outcome", 
+                choices = virginia %>% 
+                  filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                          opponent %in% input[[paste0("opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                          TaggedPitchType %in% input[[paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>% 
+                   mutate(PitchCall = case_when(
+                     PitchCall == "InPlay" ~ PlayResult,
+                     PitchCall != "InPlay" ~ PitchCall)) %>%
+                   pull(PitchCall) %>% 
+                   unique(), 
+                 selected = virginia %>% 
+                   filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                          opponent %in% input[[paste0("opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                          TaggedPitchType %in% input[[paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>% 
+                   mutate(PitchCall = case_when(
+                     PitchCall == "InPlay" ~ PlayResult,
+                     PitchCall != "InPlay" ~ PitchCall)) %>%
+                   pull(PitchCall) %>% 
+                   unique(),
+                 options = list('actions-box' = TRUE),
+                 multiple = TRUE)
+          })
+    })
+  
+  # Make the zone plot
+  observe({
+    output[[paste0("pitchZone", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- renderPlot({
+      virginia %>%
+          mutate(PitchCall = case_when(
+            PlayResult == "Single" | PlayResult == "Double" | PlayResult == "Triple" ~ "Hit",
+            PlayResult == "Out" | PlayResult == "FieldersChoice" | PlayResult == "Error" ~ "Out",
+            PitchCall == "InPlay" ~ PlayResult,
+            PitchCall != "InPlay" ~ PitchCall)) %>%
+          filter(PitchCall != "",
+                 Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                 opponent %in% input[[paste0("opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                 TaggedPitchType %in% input[[paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                 PitchCall %in% input[[paste0("outcome", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                 BatterSide %in% input[[paste0("bhand", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>%
+          ggplot(aes(x = PlateLocSide, y = PlateLocHeight)) +
+          geom_point(aes(color = PitchCall), na.rm = TRUE) +
+          xlim(-2.5, 2.5) +
+          theme_bw() +
+          labs(y = "Pitch Height(ft)", x = "Pitch Horizontal Location(ft) from Pitcher POV", color = "Outcome") +
+          geom_path(data = data.frame(x = c(-.8, -.8, .8, .8, -.8),
+                                      y = c(1.6, 3.5, 3.5, 1.6, 1.6)), 
+                    aes(x = x, y = y)) +
+          facet_grid(. ~ TaggedPitchType) +
+          coord_equal()
+    })
+  })
+  
+  
+  # Pitch results
+  observe({
+    output[[paste0("pitchTable", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]] <- DT::renderDataTable({
+      datatable(virginia %>%
+                  filter(PitchCall != "",
+                         Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                         opponent %in% input[[paste0("opponent", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                         TaggedPitchType %in% input[[paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]],
+                         BatterSide %in% input[[paste0("bhand", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gs")]]) %>%
+                  group_by(Pitcher, TaggedPitchType) %>%
+                  summarize('Sitting Velo' = paste(round(quantile(RelSpeed, .25), 1), 
+                                                   "-",
+                                                   round(quantile(RelSpeed, .75), 1)),
+                            'Max Velo' = round(max(RelSpeed), 1),
+                            'Total Pitches' = n(),
+                            Strikes = sum(PitchCall %in% c("StrikeCalled", "StrikeSwinging", "FoulBall", "InPlay")),
+                            Balls = sum(PitchCall %in% c("BallCalled", "HitByPitch", "BallinDirt", "BallIntentional")),
+                            Swings = sum(PitchCall %in% c("FoulBall", "InPlay", "StrikeSwinging")),
+                            Takes = sum(PitchCall %in% c("StrikeCalled", "BallCalled", "HitByPitch", "BallinDirt")),
+                            SwStr = sum(PitchCall == "StrikeSwinging"),
+                            WhiffPerc = 100*round(SwStr/Swings, 3),
+                            HR = sum(PlayResult == "HomeRun"),
+                            BABIP = (sum(PlayResult %in% c("Single", "Double", "Triple"))/
+                              sum(PlayResult %in% c("Single", "Double", "Triple", "Out", "Error", "FieldersChoice")| 
+                                    (TaggedHitType == "Bunt" & PlayResult == "Sacrifice"))) %>% round(3),
+                            .groups = "keep") %>%
+                  rename(Name = Pitcher, 'Pitch Type' = TaggedPitchType, 'Whiff %' = WhiffPerc),
+                  options = list(scrollX = T))
+    })
+  })
+  
   ### Inner tab 1- Durability
   # Select pitch type
   observe({
@@ -840,7 +1023,7 @@ server = function(input, output) {
 shinyApp(ui, server, options = list(height = 920, width = 980))
 
 # Tab ideas:
-# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, thresholds(pitches above speed or above a certain location), add in hitters eventually, 
+# Game summaries(Make it plotly interactive?, also add colors for percentiles of metrics), player profiles(Add pitch tunneling?), pitcher comps, add in hitters eventually
 # Once we get data for all schools, batter vs pitcher matchups for scouting reports, xStats and WAR
 ```
 
