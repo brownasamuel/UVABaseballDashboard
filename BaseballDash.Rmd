@@ -67,7 +67,7 @@ find_stats <- function(name){
 }
 
 # Player tab function
-playerTab <- function(name){
+pitcherTab <- function(name){
   tabPanel(title = name, value = name,
            fluidRow(
              p(name, style = "text-align: center; font-weight: bold; font-size: 170%; 
@@ -124,12 +124,12 @@ playerTab <- function(name){
                                   column(6, plotOutput(paste0("sp_plot_", 
                                                               paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                                      collapse = "")))),
-                                                    column(4, 
-                                                           div(dataTableOutput(paste0(
-                                                             "sp_table_", 
-                                                             paste0(unlist(str_extract_all(name,"[:upper:]")), 
-                                                                    collapse = ""))),
-                                                             style = "font_size: 80%")))),
+                                  column(4, 
+                                         div(dataTableOutput(paste0("sp_table_", 
+                                                                    paste0(unlist(str_extract_all(name,"[:upper:]")),
+                                                                           collapse = ""))),
+                                             style = "font_size: 80%")))
+                                ),
                        
                        tabPanel(title = "Zone Profile",
                                          # Add in counts
@@ -144,7 +144,8 @@ playerTab <- function(name){
                                                          plotOutput(paste0(
                                                            "zp_plot_", 
                                                            paste0(unlist(str_extract_all(name,"[:upper:]")), 
-                                                                  collapse = "")))))),
+                                                                  collapse = "")))))
+                                ),
                        
                        tabPanel(title = "Tables",
                                          # Add in batter handedness that applies to both
@@ -161,7 +162,8 @@ playerTab <- function(name){
                                                   div(dataTableOutput(paste0(
                                            "tab_usage_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
-                                                      style = "font-size: 90%"))),
+                                                      style = "font-size: 90%"))
+                                ),
                        
                        tabPanel(title = "In-Game Durability", value = "durab",
                                          fluidRow(column(2, 
@@ -176,7 +178,8 @@ playerTab <- function(name){
                                                          div(dataTableOutput(paste0(
                                            "pc_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
-                                                             style = "font-size: 80%")))),
+                                                             style = "font-size: 80%")))
+                                ),
                        
                        tabPanel(title = "Game-to-game Performance",
                                          fluidRow(column(2, 
@@ -193,7 +196,8 @@ playerTab <- function(name){
                                                   column(4, div(dataTableOutput(paste0(
                                            "gtg_table_", paste0(unlist(str_extract_all(name,"[:upper:]")), 
                                                           collapse = ""))), 
-                                                                style = "font-size: 80%"))))
+                                                                style = "font-size: 80%")))
+                                )
                        )
            )
 }
@@ -263,22 +267,22 @@ ui <- fluidPage(
     ### Tab 2- Player profiles(Should I add in a header to each?)
     navbarMenu(title = "Pitcher Profiles",
                # Put in sub tabs for each player
-               playerTab("Jake Berry"),
-               playerTab("Evan Blanco"),
-               playerTab("Matthew Buchanan"),
-               playerTab("Connelly Early"),
-               playerTab("Brian Edgington"),
-               playerTab("Alex Greene"),
-               playerTab("Bradley Hodges"),
-               playerTab("Jake Hodorovich"),
-               playerTab("Chase Hungate"),
-               playerTab("Kevin Jaxel"),
-               playerTab("Avery Mabe"),
-               playerTab("Cullen McKay"),
-               playerTab("Jack O'Connor"),
-               playerTab("Nick Parker"),
-               playerTab("Angelo Tonas"),
-               playerTab("Jay Woolfolk")
+               pitcherTab("Jake Berry"),
+               pitcherTab("Evan Blanco"),
+               pitcherTab("Matthew Buchanan"),
+               pitcherTab("Connelly Early"),
+               pitcherTab("Brian Edgington"),
+               pitcherTab("Alex Greene"),
+               pitcherTab("Bradley Hodges"),
+               pitcherTab("Jake Hodorovich"),
+               pitcherTab("Chase Hungate"),
+               pitcherTab("Kevin Jaxel"),
+               pitcherTab("Avery Mabe"),
+               pitcherTab("Cullen McKay"),
+               pitcherTab("Jack O'Connor"),
+               pitcherTab("Nick Parker"),
+               pitcherTab("Angelo Tonas"),
+               pitcherTab("Jay Woolfolk")
                )
     )
   )
@@ -292,6 +296,7 @@ server = function(input, output) {
                      pickerInput("opponent", "Game", 
                                  choices = c(virginia %>% 
                                                filter(Pitcher %in% input$pitcher) %>% 
+                                               arrange(mdy(Date)) %>%
                                                pull(opponent) %>% 
                                                unique()),
                                  options = list('actions-box' = TRUE),
@@ -435,12 +440,14 @@ server = function(input, output) {
                       "Game", 
                       choices = c(virginia %>% 
                                     filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                    arrange(mdy(Date)) %>%
                                     pull(opponent) %>% 
                                     unique()),
                       selected = c(virginia %>% 
-                                    filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
-                                    pull(opponent) %>% 
-                                    unique()),
+                                     filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                     arrange(mdy(Date)) %>%
+                                     pull(opponent) %>% 
+                                     unique()),
                       options = list('actions-box' = TRUE),
                       multiple = TRUE)
           })
@@ -661,14 +668,20 @@ server = function(input, output) {
   observe({
     output[[
       paste0("ptype", paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), "gtg")]] <- renderUI({
-        selectizeInput(paste0("ptype", 
-                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""), 
-                              "gtg"), 
-                       "Pitch type", 
-                       choices = c(virginia %>% 
+        pickerInput(paste0("ptype", 
+                           paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""),
+                           "gtg"), 
+                    "Pitch type", 
+                    choices = c(virginia %>% 
                                      filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
                                      pull(TaggedPitchType) %>% 
-                                     unique()))
+                                     unique()),
+                    selected = c(virginia %>% 
+                                   filter(Pitcher %in% sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>% 
+                                   pull(TaggedPitchType) %>% 
+                                   unique()),
+                    options = list('actions-box' = TRUE),
+                    multiple = TRUE)
         })
     })
   # Select metric
@@ -684,12 +697,16 @@ server = function(input, output) {
                                    "Usage" = "Usage"))
         })
     })
-  # Game-to-game graph
+  
+  # Make the game-to-game graph
   observe({
     output[[paste0("gtg_graph_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderPlot({
                      allGames %>%
-                       filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash)) %>%
+                       filter(Pitcher == sub("([^ ]*) ([^ ]*)", "\\2, \\1", input$Dash),
+                              TaggedPitchType %in% input[[paste0("ptype", 
+                                                                 paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""),
+                                                                 "gtg")]]) %>%
                        group_by(Pitcher, Date, opponent, TaggedPitchType) %>%
                        summarize(Velocity = mean(RelSpeed, na.rm = TRUE), 
                                  SpinRate = mean(SpinRate, na.rm = TRUE),
@@ -697,38 +714,30 @@ server = function(input, output) {
                                  .groups = "drop_last") %>%
                        mutate(Usage = 100*ct/sum(ct)) %>%
                        ungroup() %>%
-                       filter(TaggedPitchType == input[[paste0("ptype", 
-                                                               paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                                      collapse = ""), "gtg")]]) %>%
+                       mutate(opponent = factor(opponent, levels = unique(opponent))) %>%
                        arrange(mdy(Date)) %>%
-                       mutate(opponent = factor(opponent, levels = opponent)) %>%
-                       ggplot(aes_string(x = "opponent", 
-                                  y = input[[paste0("metric", 
+                       ggplot(aes(x = opponent, 
+                                  y = !!sym(input[[paste0("metric", 
                                                     paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                           collapse = ""), "gtg")]]
+                                                           collapse = ""), "gtg")]]),
+                                  color = TaggedPitchType
                                   )) +
                        geom_point() +
-                       geom_line(aes(group = 1)) +
+                       geom_line(aes(group = TaggedPitchType)) +
                        theme_bw() + 
                        theme(axis.text.x = element_text(angle = 15, hjust = .5, vjust = .5)) +
                        labs(title = paste(input$Dash, "Average", 
-                                          input[[paste0("ptype", 
-                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                               collapse = ""), "gtg")]], 
                                           input[[paste0("metric", 
                                                         paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                collapse = ""), "gtg")]],
                                           "by Game"), 
                             x = "Opponent", 
-                            y = paste(input[[paste0("ptype", 
-                                                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                           collapse = ""), "gtg")]], 
-                                      input[[paste0("metric", 
-                                                        paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
-                                                               collapse = ""), "gtg")]]))
+                            y = input[[paste0("metric", 
+                                              paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
+                                                     collapse = ""), "gtg")]])
                      })
     })
-  # Game-to-game table
+  # Make the game-to-game table
   observe({
     output[[paste0("gtg_table_", 
                    paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), collapse = ""))]] <- renderDataTable({
@@ -741,16 +750,17 @@ server = function(input, output) {
                                  .groups = "drop_last") %>%
                        mutate(Usage = (100*ct/sum(ct)) %>% round(1)) %>%
                        ungroup() %>%
-                       filter(TaggedPitchType == input[[paste0("ptype", 
+                       filter(TaggedPitchType %in% input[[paste0("ptype", 
                                                                paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                                       collapse = ""), "gtg")]]) %>%
                        arrange(mdy(Date)) %>%
-                       select(opponent, ct, 
+                       select(opponent, ct, TaggedPitchType,
                               input[[paste0("metric", 
                                             paste0(unlist(str_extract_all(input$Dash, "[:upper:]")), 
                                                    collapse = ""), "gtg")]]) %>%
                        rename("Number Thrown" = ct,
-                              "Opponent" = opponent) 
+                              "Opponent" = opponent,
+                              "Pitch Type" = TaggedPitchType) 
                      })
   })
   ### Inner tab 3- Zone profile
