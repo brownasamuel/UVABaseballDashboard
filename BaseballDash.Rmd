@@ -78,7 +78,7 @@ pitcherTab <- function(name){
                                                                    collapse = ""))), style = "font-size: 95%"))),
            # Put in options for what to look at
            tabsetPanel(tabPanel(title = "Overview",
-                                # Add in brooks baseball summary type thing
+                                # Add in baseball savant type page
                                 ),
                        
                        tabPanel(title = "Game Summaries",
